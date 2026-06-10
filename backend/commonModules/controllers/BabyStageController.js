@@ -1,0 +1,266 @@
+const BabyStage = require("@models/BabyStage");
+const { User } = require("@models/UserModel");
+const {
+  sendResponse,
+  parsePaginationParams,
+  generateMeta,
+  validateParams,
+} = require("@utils/responseUtil");
+
+// ─── PUBLIC ───────────────────────────────────────────────────────────────────
+
+// Get all active baby stages (for the selection screen)
+const getBabyStages = async (req, res) => {
+  try {
+    const stages = await BabyStage.find({ active: true })
+      .sort({ createdAt: 1 })
+      .select("title features");
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: stages,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+// Get a single baby stage by ID
+const getBabyStageById = async (req, res) => {
+  try {
+    const validationOptions = {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    };
+
+    if (!validateParams(req, res, validationOptions)) return;
+
+    const stage = await BabyStage.findOne({ _id: req.params.id, active: true });
+
+    if (!stage) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_stage_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: stage,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+// Select a baby stage (logged-in user)
+const selectBabyStage = async (req, res) => {
+  try {
+    const validationOptions = {
+      rawData: ["stageId", "babyName"],
+      objectIdFields: ["stageId"],
+    };
+
+    if (!validateParams(req, res, validationOptions)) return;
+
+    const { stageId, babyName } = req.body;
+
+    const stage = await BabyStage.findOne({ _id: stageId, active: true });
+    if (!stage) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_stage_not_found",
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        "onboarding.babyStage": stage._id,
+        "onboarding.babyName": babyName.trim(),
+      },
+      { new: true }
+    ).populate("onboarding.babyStage", "title features");
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "baby_stage_selected_success",
+      data: { onboarding: user.onboarding },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+// ─── ADMIN ────────────────────────────────────────────────────────────────────
+
+// Get all baby stages with pagination (admin)
+const adminGetBabyStages = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+
+  try {
+    const [stages, totalStages] = await Promise.all([
+      BabyStage.find()
+        .sort({ createdAt: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      BabyStage.countDocuments(),
+    ]);
+
+    const meta = generateMeta(page, limit, totalStages);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: stages,
+      meta,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+// Create a new baby stage
+const createBabyStage = async (req, res) => {
+  const { title, features = [] } = req.body;
+
+  try {
+    const validationOptions = {
+      rawData: ["title"],
+    };
+
+    if (!validateParams(req, res, validationOptions)) return;
+
+    const stage = new BabyStage({ title, features });
+    await stage.save();
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "baby_stage_created_success",
+      data: stage,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+// Update an existing baby stage
+const updateBabyStage = async (req, res) => {
+  const { title, features, active } = req.body;
+
+  try {
+    const validationOptions = {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    };
+
+    if (!validateParams(req, res, validationOptions)) return;
+
+    const stage = await BabyStage.findById(req.params.id);
+    if (!stage) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_stage_not_found",
+      });
+    }
+
+    stage.title = title || stage.title;
+    if (features !== undefined) stage.features = features;
+    if (active !== undefined) stage.active = active;
+
+    await stage.save();
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "baby_stage_updated_success",
+      data: stage,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+// Delete a baby stage
+const deleteBabyStage = async (req, res) => {
+  try {
+    const validationOptions = {
+      pathParams: ["id"],
+      objectIdFields: ["id"],
+    };
+
+    if (!validateParams(req, res, validationOptions)) return;
+
+    const stage = await BabyStage.findByIdAndDelete(req.params.id);
+    if (!stage) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_stage_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "baby_stage_deleted_success",
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  getBabyStages,
+  getBabyStageById,
+  selectBabyStage,
+  adminGetBabyStages,
+  createBabyStage,
+  updateBabyStage,
+  deleteBabyStage,
+};

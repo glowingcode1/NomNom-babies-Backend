@@ -61,6 +61,16 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    parentCaregiverName: {
+      type: String,
+      default: "",
+    },
+
+    acceptTerms: {
+      type: Boolean,
+      default: false,
+    },
+
     verificationStatus: {
       email: {
         type: String,
@@ -120,7 +130,7 @@ const userSchema = new mongoose.Schema(
       ref: "Baby",
       default: null,
     },
-    
+
     otpInfo: {
       emailOtp: {
         otp: {
@@ -237,7 +247,7 @@ const userSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Hash password before saving to database
@@ -267,7 +277,9 @@ userSchema.methods.generateAuthToken = function () {
 
 // Find user by credentials
 userSchema.statics.findByCredentials = async (email, password) => {
-  const normalizedEmail = String(email || "").trim().toLowerCase();
+  const normalizedEmail = String(email || "")
+    .trim()
+    .toLowerCase();
   const user = await User.findOne({ email: normalizedEmail });
 
   if (!user) {

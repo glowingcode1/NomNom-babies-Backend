@@ -44,8 +44,11 @@ const register = async (req, res) => {
     const validationOptions = {
       rawData: [
         "name",
+        "phoneNumber",
+        "parentCaregiverName",
         "email",
         "password",
+        "confirmPassword",
         "timezone",
       ],
       minLengthFields: {
@@ -57,15 +60,44 @@ const register = async (req, res) => {
     }
 
     const {
-      email,
+      profileIcon= "",
       name,
+      phoneNumber,
+      parentCaregiverName,
+      email,
       password,
+      confirmPassword,
+      acceptTerms,
       timezone,
       language = "en",
       role,
-      profileIcon = "",
-      phoneNumber = "",
     } = req.body;
+
+    if (password !== confirmPassword) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "passwords_do_not_match",
+      });
+    }
+    
+    if ( !acceptTerms) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "please_accept_terms",
+      });
+    }
+
+    if (!validator.isMobilePhone(phoneNumber, "any", {
+      strictMode: true,
+    })) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_phoneNumber",
+      });
+    }
 
     if (!validator.isEmail(String(email || "").trim())) {
       return sendResponse({
@@ -99,17 +131,22 @@ const register = async (req, res) => {
       password,
       phoneNumber,
       profileIcon,
+      parentCaregiverName,
+      acceptTerms,
       timezone,
       language,
       verificationStatus: {
-        email: "verified",
-        phoneNumber: phoneNumber ? "pending" : "pending",
+        email: "pending",
+        phoneNumber: "pending",
       },
       accountState: {
         userType: assignedRole,
-        status: "active",
+        status: "inactive",
       },
     });
+
+    const otp = user.generateOtp("email", timezone);
+    await user.save();
 
     const token = user.generateAuthToken();
     const response = await getFormattedUserResponse(user, token);
@@ -118,7 +155,10 @@ const register = async (req, res) => {
       res,
       statusCode: 201,
       translationKey: "signup_successful",
-      data: response,
+      data: {
+        ...response,
+        otp,
+      },
     });
   } catch (error) {
     const statusCode = error.name === "ValidationError" ? 400 : 500;
@@ -231,8 +271,8 @@ const getMe = async (req, res) => {
 
 // Generate OTP
 const generateOtp = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // const session = await mongoose.startSession();
+  // session.startTransaction();
 
   try {
     const { email, phoneNumber, type } = req.body;
@@ -296,15 +336,16 @@ const generateOtp = async (req, res) => {
       }
     }
 
-    await user.save({ session });
+    // await user.save({ session });
+    await user.save();
 
     // Send email or SMS within the transaction
     const subject = "Password Reset OTP";
     const mBody = forgotPasswordOtpEmailTemplate(otp);
     //await sendEmailViaBrevo([email], subject, mBody);
 
-    await session.commitTransaction();
-    session.endSession();
+    // await session.commitTransaction();
+    // session.endSession();
 
     return sendResponse({
       res,
@@ -313,8 +354,8 @@ const generateOtp = async (req, res) => {
       data: { otp },
     });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    // await session.abortTransaction();
+    // session.endSession();
 
     return sendResponse({
       res,
@@ -327,8 +368,8 @@ const generateOtp = async (req, res) => {
 
 //Verify otp
 const verifyOtp = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // const session = await mongoose.startSession();
+  // session.startTransaction();
 
   try {
     const { email, phoneNumber, type, otp } = req.body;
@@ -409,9 +450,10 @@ const verifyOtp = async (req, res) => {
     const resetToken = generateResetToken(); // Function to generate a secure token
     user.resetToken = resetToken; // Save the token to the user model
 
-    await user.save({ session });
-    await session.commitTransaction();
-    session.endSession();
+    // await user.save({ session });
+    await user.save();
+    // await session.commitTransaction();
+    // session.endSession();
 
     // Fetch the updated user and profile icon simultaneously
     const updatedUser = await User.findById(user._id);
@@ -426,11 +468,14 @@ const verifyOtp = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "otp_verified",
-      data: response,
+      data: {
+        ...response,
+        resetToken: user.resetToken,
+      },
     });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
+    // await session.abortTransaction();
+    // session.endSession();
     console.error("Error during OTP verification:", error);
     return sendResponse({
       res,

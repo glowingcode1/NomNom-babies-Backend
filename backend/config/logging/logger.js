@@ -35,4 +35,5 @@ module.exports = {
   info: (msg, meta) => write("INFO", msg, meta),
   warn: (msg, meta) => write("WARN", msg, meta),
   error: (msg, meta) => write("ERROR", msg, meta),
+  fatal: (msg, meta) => write("FATAL", msg, meta),
 };

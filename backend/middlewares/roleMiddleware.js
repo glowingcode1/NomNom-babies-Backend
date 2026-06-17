@@ -1,4 +1,3 @@
-// middlewares/roleMiddleware.js
 const { sendResponse } = require("@utils/responseUtil");
 
 const roleMiddleware = (allowedRoles) => (req, res, next) => {

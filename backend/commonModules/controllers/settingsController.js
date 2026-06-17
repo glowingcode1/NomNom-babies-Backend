@@ -127,7 +127,7 @@ const getFaqs = async (req, res) => {
 
 // Create Admin Settings
 const createAdminSettings = async (req, res) => {
-  const { terms_and_conditions, about_us, privacy_policy, faqs } = req.body;
+  const { terms_and_conditions, about_us, privacy_policy, } = req.body;
 
   try {
     // Check if AdminSettings already exist
@@ -145,7 +145,6 @@ const createAdminSettings = async (req, res) => {
       terms_and_conditions: terms_and_conditions || "",
       about_us: about_us || "",
       privacy_policy: privacy_policy || "",
-      faqs: faqs || "",
     });
 
     const savedSettings = await newSettings.save();
@@ -175,7 +174,6 @@ const updateAdminSettings = async (req, res) => {
   if (req.body.about_us) updateData.about_us = req.body.about_us;
   if (req.body.privacy_policy)
     updateData.privacy_policy = req.body.privacy_policy;
-  if (req.body.faqs) updateData.faqs = req.body.faqs;
 
   try {
     const settings = await AdminSettings.findByIdAndUpdate(

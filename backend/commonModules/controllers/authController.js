@@ -10,23 +10,13 @@ const {
 } = require("@utils/emailTemplates");
 const { createOrSkipDevice, Devices } = require("@models/Devices");
 const validator = require("validator");
-const APP_ROLES = [
-  "guest",
-  "parent",
-  "premium",
-  "contentAdmin",
-  "nutritionReviewer",
-  "superAdmin",
-];
-const STAFF_ROLES = ["contentAdmin", "nutritionReviewer", "superAdmin"];
 
 const normalizeRole = (role) => {
   if (!role) {
-    return "parent";
+    return "user";
   }
 
-  const normalizedRole = String(role).trim();
-  return APP_ROLES.includes(normalizedRole) ? normalizedRole : "parent";
+  return role === "admin" ? "admin" : "user";
 };
 
 const canAssignStaffRole = (req) => {
@@ -41,18 +31,24 @@ const getFormattedUserResponse = async (user, token = null) => {
 //register
 const register = async (req, res) => {
   try {
+    const requestedRole = normalizeRole(req.body.role);
+
+    const isAdminSignup = requestedRole === "admin" && canAssignStaffRole(req);
+
     const validationOptions = {
-      rawData: [
-        "name",
-        "phoneNumber",
-        "parentCaregiverName",
-        "email",
-        "password",
-        "confirmPassword",
-        "timezone",
-      ],
+      rawData: isAdminSignup
+        ? ["name", "email", "password"]
+        : [
+            "name",
+            "phoneNumber",
+            "parentCaregiverName",
+            "email",
+            "password",
+            "confirmPassword",
+            "timezone",
+          ],
       minLengthFields: {
-        password: 6, // Password must be at least 6 characters long
+        password: 6,
       },
     };
     if (!validateParams(req, res, validationOptions)) {
@@ -60,7 +56,7 @@ const register = async (req, res) => {
     }
 
     const {
-      profileIcon= "",
+      profileIcon = "",
       name,
       phoneNumber,
       parentCaregiverName,
@@ -70,18 +66,17 @@ const register = async (req, res) => {
       acceptTerms,
       timezone,
       language = "en",
-      role,
     } = req.body;
 
-    if (password !== confirmPassword) {
+    if (!isAdminSignup && password !== confirmPassword) {
       return sendResponse({
         res,
         statusCode: 400,
         translationKey: "passwords_do_not_match",
       });
     }
-    
-    if ( !acceptTerms) {
+
+    if (!isAdminSignup && !acceptTerms) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -89,9 +84,12 @@ const register = async (req, res) => {
       });
     }
 
-    if (!validator.isMobilePhone(phoneNumber, "any", {
-      strictMode: true,
-    })) {
+    if (
+      !isAdminSignup &&
+      !validator.isMobilePhone(phoneNumber, "any", {
+        strictMode: true,
+      })
+    ) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -117,31 +115,25 @@ const register = async (req, res) => {
         translationKey: "email_already",
       });
     }
-
-    const requestedRole = normalizeRole(role);
-    const assignedRole = STAFF_ROLES.includes(requestedRole)
-      ? canAssignStaffRole(req)
-        ? requestedRole
-        : "parent"
-      : requestedRole;
+    const assignedRole = isAdminSignup ? "admin" : "parent";
 
     const user = await User.create({
       email: normalizedEmail,
       name,
       password,
-      phoneNumber,
+      phoneNumber: isAdminSignup ? undefined : phoneNumber,
       profileIcon,
-      parentCaregiverName,
-      acceptTerms,
-      timezone,
+      parentCaregiverName: isAdminSignup ? undefined : parentCaregiverName,
+      acceptTerms: isAdminSignup ? true : acceptTerms,
+      timezone: timezone || "Asia/Karachi",
       language,
       verificationStatus: {
         email: "pending",
-        phoneNumber: "pending",
+        phoneNumber: isAdminSignup ? "verified" : "pending",
       },
       accountState: {
         userType: assignedRole,
-        status: "inactive",
+        status: isAdminSignup ? "active" : "inactive",
       },
     });
 
@@ -299,11 +291,11 @@ const generateOtp = async (req, res) => {
     let user;
     if (type === "email") {
       user = await User.findOne({ email: email.toLowerCase() }).select(
-        "email accountState otpInfo"
+        "email accountState otpInfo",
       );
     } else if (type === "phoneNumber") {
       user = await User.findOne({ phoneNumber }).select(
-        "phoneNumber accountState otpInfo"
+        "phoneNumber accountState otpInfo",
       );
     }
 
@@ -399,11 +391,11 @@ const verifyOtp = async (req, res) => {
     let user;
     if (type === "email") {
       user = await User.findOne({ email: email.toLowerCase() }).select(
-        "email accountState otpInfo verificationStatus timezone"
+        "email accountState otpInfo verificationStatus timezone",
       );
     } else if (type === "phoneNumber") {
       user = await User.findOne({ phoneNumber }).select(
-        "phoneNumber accountState otpInfo verificationStatus timezone"
+        "phoneNumber accountState otpInfo verificationStatus timezone",
       );
     }
 
@@ -555,7 +547,7 @@ const logout = async (req, res) => {
       // Use $pull to remove the specific device from the devices array
       await Devices.updateOne(
         { userId: userId },
-        { $pull: { devices: { deviceId: deviceId } } }
+        { $pull: { devices: { deviceId: deviceId } } },
       );
     }
 
@@ -585,19 +577,19 @@ const deleteAccount = async (req, res) => {
     await User.findByIdAndUpdate(
       userId,
       {
-      $set: {
-        email: randomEmail, // replace with random email
-        previousEmail: email, // store the original email
-        "accountState.status": "hardDeleted", 
-        "accountState.finalDeletionDate": new Date(), // set to now or your logic
+        $set: {
+          email: randomEmail, // replace with random email
+          previousEmail: email, // store the original email
+          "accountState.status": "hardDeleted",
+          "accountState.finalDeletionDate": new Date(), // set to now or your logic
+        },
       },
-      },
-      { new: true }
+      { new: true },
     );
 
     await Devices.updateOne(
       { userId: userId },
-      { $set: { devices: [] } } // This will empty the array of devices for the user
+      { $set: { devices: [] } }, // This will empty the array of devices for the user
     );
 
     return sendResponse({
@@ -659,7 +651,6 @@ const socialAuth = async (req, res) => {
         });
       }
 
-
       // Check if the social ID is already linked, if not, link it
       if (provider === "google" && !existingUser.googleId) {
         existingUser.googleId = socialId; // Link Google account
@@ -705,6 +696,10 @@ const socialAuth = async (req, res) => {
         verificationStatus: {
           email: "verified", // Mark email as verified
         },
+        accountState: {
+          userType: "user",
+          status: "active",
+        }
       });
 
       await newUser.save({ session });

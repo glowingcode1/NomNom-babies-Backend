@@ -1,4 +1,3 @@
-// models/FAQ.js
 const mongoose = require("mongoose");
 
 const FAQSchema = new mongoose.Schema(
@@ -14,6 +13,10 @@ const FAQSchema = new mongoose.Schema(
       required: true,
       trim: true,
       default: "",
+    },
+    isActive: {
+      type: Boolean,
+      default: true
     },
   },
   {

@@ -92,14 +92,10 @@ const userSchema = new mongoose.Schema(
       userType: {
         type: String,
         enum: [
-          "guest",
-          "parent",
-          "premium",
-          "contentAdmin",
-          "nutritionReviewer",
-          "superAdmin",
+          "user",
+          "admin",
         ],
-        default: "parent",
+        default: "user",
       },
       status: {
         type: String,

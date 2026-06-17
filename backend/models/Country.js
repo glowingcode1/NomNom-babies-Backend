@@ -7,13 +7,25 @@ const countrySchema = new mongoose.Schema(
       required: [true, 'Country name is required'],
       trim: true,
     },
-    signatureFoods: {
-      type: [String],
-      default: [],
+    code: {
+      type: String,
+      required: [true, "Country code is required"],
+      trim: true,
+      uppercase: true,
+      unique: true,
+    },
+    status:{
+      type: String,
+      enum: ["active", "review", "disabled"],
+      default: "active",
     },
     isEnabled: {
       type: Boolean,
       default: true,
+    },
+    signatureFoods: {
+      type: [String],
+      default: [],
     },
   },
   { timestamps: true }

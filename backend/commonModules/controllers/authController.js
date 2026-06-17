@@ -115,7 +115,7 @@ const register = async (req, res) => {
         translationKey: "email_already",
       });
     }
-    const assignedRole = isAdminSignup ? "admin" : "parent";
+    const assignedRole = isAdminSignup ? "admin" : "user";
 
     const user = await User.create({
       email: normalizedEmail,

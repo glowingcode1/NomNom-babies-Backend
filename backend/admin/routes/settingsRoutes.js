@@ -3,35 +3,65 @@ const {
   getTermsAndConditions,
   getAboutUs,
   getPrivacyPolicy,
-  updateAdminSettings,
-  createAdminSettings,
-  getFaqs
+  getFaqs,
+  updatePrivacyPolicy,
+  updateAboutUs,
+  updateFaqs,
+  createFaqs,
+  deleteFaqs,
+  updateTermsAndConditions,
 } = require("../../commonModules/controllers/settingsController");
 const auth = require("@middlewares/authMiddleware");
-const createRateLimiter = require("@utils/rateLimiter");
 const roleMiddleware = require("@middlewares/roleMiddleware");
 
 const router = express.Router();
 
-// Create a rate limiter for Admin Settings
-const apiRateLimiter = createRateLimiter("AdminSettings");
+// GET
 
-// Route to fetch terms and conditions with rate limiting
-router.get("/terms-conditions", apiRateLimiter, getTermsAndConditions);
+router.get(
+  "/terms-conditions",
+  auth,
+  roleMiddleware(["admin"]),
+  getTermsAndConditions,
+);
 
-// Route to fetch about us with rate limiting
-router.get("/about-us", apiRateLimiter, getAboutUs);
+router.get("/about-us", auth, roleMiddleware(["admin"]), getAboutUs);
 
-// Route to fetch privacy policy with rate limiting
-router.get("/privacy-policy", apiRateLimiter, getPrivacyPolicy);
+router.get(
+  "/privacy-policy",
+  auth,
+  roleMiddleware(["admin"]),
+  getPrivacyPolicy,
+);
 
-// Route to fetch privacy policy with rate limiting
-router.get("/faqs", apiRateLimiter, getFaqs);
+router.get("/faqs", auth, roleMiddleware(["admin"]), getFaqs);
 
-// Route to create admin settings (requires auth and admin privileges)
-router.post("/create", auth, roleMiddleware(["admin"]), createAdminSettings);
+// UPDATE
 
-// Route to update all settings at once (requires auth and admin privileges)
-router.put("/update/:id", auth, roleMiddleware(["admin"]), updateAdminSettings);
+router.put(
+  "/terms-conditions",
+  auth,
+  roleMiddleware(["admin"]),
+  updateTermsAndConditions,
+);
+
+router.put("/about-us", auth, roleMiddleware(["admin"]), updateAboutUs);
+
+router.put(
+  "/privacy-policy",
+  auth,
+  roleMiddleware(["admin"]),
+  updatePrivacyPolicy,
+);
+
+router.put("/faqs/:id", auth, roleMiddleware(["admin"]), updateFaqs);
+
+// CREATE
+
+router.post("/faqs", auth, roleMiddleware(["admin"]), createFaqs);
+
+// DELETE
+
+router.delete("/faqs/:id", auth, roleMiddleware(["admin"]), deleteFaqs);
 
 module.exports = router;

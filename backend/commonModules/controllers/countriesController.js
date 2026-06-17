@@ -1,6 +1,11 @@
-const Country = require('@models/Country');
+const Country = require("@models/Country");
 const { User } = require("@models/UserModel");
-const { sendResponse, validateParams, parsePaginationParams, generateMeta } = require('@utils/responseUtil');
+const {
+  sendResponse,
+  validateParams,
+  parsePaginationParams,
+  generateMeta,
+} = require("@utils/responseUtil");
 
 const getCountries = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -9,7 +14,7 @@ const getCountries = async (req, res) => {
     const [countries, totalCountries] = await Promise.all([
       Country.find({ isEnabled: true })
         .sort({ name: 1 })
-        .select('name signatureFoods')
+        .select("name signatureFoods")
         .skip((page - 1) * limit)
         .limit(limit),
       Country.countDocuments({ isEnabled: true }),
@@ -20,12 +25,17 @@ const getCountries = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: 'data_fetched_successfully',
+      translationKey: "data_fetched_successfully",
       data: countries,
       meta,
     });
   } catch (error) {
-    return sendResponse({ res, statusCode: 500, translationKey: error.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
   }
 };
 
@@ -34,17 +44,26 @@ const getCountryById = async (req, res) => {
     const country = await Country.findById(req.params.id);
 
     if (!country) {
-      return sendResponse({ res, statusCode: 404, translationKey: 'country_not_found' });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "country_not_found",
+      });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: 'data_fetched_successfully',
+      translationKey: "data_fetched_successfully",
       data: country,
     });
   } catch (error) {
-    return sendResponse({ res, statusCode: 500, translationKey: error.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
   }
 };
 
@@ -75,7 +94,9 @@ const selectCountries = async (req, res) => {
 
     // Validate all IDs are valid ObjectIds
     const mongoose = require("mongoose");
-    const allValid = countryIds.every((id) => mongoose.Types.ObjectId.isValid(id));
+    const allValid = countryIds.every((id) =>
+      mongoose.Types.ObjectId.isValid(id),
+    );
     if (!allValid) {
       return sendResponse({
         res,
@@ -102,7 +123,7 @@ const selectCountries = async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { "onboarding.selectedCountries": countryIds },
-      { new: true }
+      { new: true },
     ).populate("onboarding.selectedCountries", "name signatureFoods");
 
     return sendResponse({
@@ -121,45 +142,71 @@ const selectCountries = async (req, res) => {
   }
 };
 
-
 const createCountry = async (req, res) => {
   try {
-    if (!validateParams(req, res, { rawData: ['name'] })) return;
+    if (!validateParams(req, res, { rawData: ["name", "code"] })) return;
 
-    const { name, signatureFoods = [] } = req.body;
+    const {
+      name,
+      code,
+      status = "active",
+      isEnabled = true,
+      signatureFoods = [],
+    } = req.body;
 
-    const existing = await Country.findOne({ name: name.trim() });
+    const existing = await Country.findOne({
+      $or: [{ name: name.trim() }, { code: code.trim().toUpperCase() }],
+    });
     if (existing) {
-      return sendResponse({ res, statusCode: 409, translationKey: 'country_already_exists' });
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "country_already_exists",
+      });
     }
 
     const country = await Country.create({
       name: name.trim(),
+      code: code.trim().toUpperCase(),
+      status,
+      isEnabled,
       signatureFoods,
     });
 
     return sendResponse({
       res,
       statusCode: 201,
-      translationKey: 'country_created',
+      translationKey: "country_created",
       data: country,
     });
   } catch (error) {
-    return sendResponse({ res, statusCode: 500, translationKey: error.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
   }
 };
 
 const updateCountry = async (req, res) => {
   try {
-    const { name, signatureFoods, isEnabled } = req.body;
+    const { name, code, status, signatureFoods, isEnabled } = req.body;
 
-    if (name) {
+    if (name || code) {
       const clash = await Country.findOne({
-        name: name.trim(),
         _id: { $ne: req.params.id },
+        $or: [
+          ...(name? [{ name: name.trim() }] : []),
+          ...(code? [{ code: code.trim().toUpperCase() }] : []),
+        ]
       });
       if (clash) {
-        return sendResponse({ res, statusCode: 409, translationKey: 'country_already_exists' });
+        return sendResponse({
+          res,
+          statusCode: 409,
+          translationKey: "country_already_exists",
+        });
       }
     }
 
@@ -168,25 +215,36 @@ const updateCountry = async (req, res) => {
       {
         $set: {
           ...(name !== undefined && { name: name.trim() }),
+          ...(code !== undefined && { code: code.trim().toUpperCase(),}),
+          ...(status !== undefined && { status}),
           ...(signatureFoods !== undefined && { signatureFoods }),
           ...(isEnabled !== undefined && { isEnabled }),
         },
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!country) {
-      return sendResponse({ res, statusCode: 404, translationKey: 'country_not_found' });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "country_not_found",
+      });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: 'country_updated',
+      translationKey: "country_updated",
       data: country,
     });
   } catch (error) {
-    return sendResponse({ res, statusCode: 500, translationKey: error.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
   }
 };
 
@@ -195,20 +253,40 @@ const toggleCountry = async (req, res) => {
     const country = await Country.findById(req.params.id);
 
     if (!country) {
-      return sendResponse({ res, statusCode: 404, translationKey: 'country_not_found' });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "country_not_found",
+      });
     }
 
     country.isEnabled = !country.isEnabled;
+    if (!country.isEnabled) {
+      country.status = "disabled";
+    }
+
+    if (
+      country.isEnabled && country.status === "disabled"
+    ) {
+      country.status = "active";
+    }
     await country.save();
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: country.isEnabled ? 'country_enabled' : 'country_disabled',
+      translationKey: country.isEnabled
+        ? "country_enabled"
+        : "country_disabled",
       data: country,
     });
   } catch (error) {
-    return sendResponse({ res, statusCode: 500, translationKey: error.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
   }
 };
 
@@ -217,17 +295,26 @@ const deleteCountry = async (req, res) => {
     const country = await Country.findByIdAndDelete(req.params.id);
 
     if (!country) {
-      return sendResponse({ res, statusCode: 404, translationKey: 'country_not_found' });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "country_not_found",
+      });
     }
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: 'country_deleted',
+      translationKey: "country_deleted",
       data: { id: req.params.id },
     });
   } catch (error) {
-    return sendResponse({ res, statusCode: 500, translationKey: error.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
   }
 };
 
@@ -235,29 +322,56 @@ const adminGetCountries = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
   try {
-    const { search = '' } = req.query;
+    const { search = "", status, enabled, } = req.query;
 
-    const query = search ? { name: { $regex: search, $options: 'i' } } : {};
+    const query = {};
+
+    if(search) {
+      query.$or = [
+        { name: {$regex: search, $options: "i" }},
+        { code: {$regex: search, $options: "i" }},
+      ];
+    }
+
+    if (status) {
+      query.status = status;
+    }
+
+    if (enabled !== undefined) {
+      query.isEnabled = enabled === "true";
+    }
 
     const [countries, totalCountries] = await Promise.all([
       Country.find(query)
         .sort({ name: 1 })
         .skip((page - 1) * limit)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Country.countDocuments(query),
     ]);
+
+    const formattedCountries = countries.map((country) => ({
+      ...country,
+      enabled: country.isEnabled,
+      recipies: 0,
+    }));
 
     const meta = generateMeta(page, limit, totalCountries);
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: 'data_fetched_successfully',
+      translationKey: "data_fetched_successfully",
       data: countries,
       meta,
     });
   } catch (error) {
-    return sendResponse({ res, statusCode: 500, translationKey: error.message, error });
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
   }
 };
 

@@ -14,7 +14,7 @@ const path = require("path");
 // Path to the JSON file
 const currenciesFilePath = path.join(
   __dirname,
-  "@assets/currencies/currencies.json"
+  "@assets/currencies/currencies.json",
 );
 
 // Function to read the JSON file and parse it
@@ -35,25 +35,45 @@ const currenciesData = readJSONFile(currenciesFilePath);
 
 const allUsers = async (req, res) => {
   try {
-    const data = await User.find({}).sort({ createdAt: -1 });
-    console.log(data.length);
-    sendResponse({
+    const { page = 1, limit = 10, keyword = "" } = req.query;
+
+    const query = {
+      "accountState.userType": { $ne: "admin" },
+    };
+    if (keyword?.trim()) {
+      query.$or = [
+        { name: { $regex: keyword, $options: "i" } },
+        { email: { $regex: keyword, $options: "i" } },
+        { phoneNumber: { $regex: keyword, $options: "i" } },
+      ];
+    }
+
+    const [users, totalRecords] = await Promise.all([
+      User.find(query)
+        .select("-password -resetToken -otpInfo")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(Number(limit)),
+
+      User.countDocuments(query),
+    ]);
+
+    return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "suggested_friends",
-      data,
+      translationKey: "users_fetched_successfully",
+      data: users,
+      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     sendResponse({
       res,
       statusCode: 500,
-      translationKey: "an_error_6",
+      translationKey: "something_went_wrong",
       error,
     });
   }
 };
-
-
 
 // Block User Function
 const blockUser = async (req, res) => {
@@ -214,7 +234,7 @@ const addOrUpdateSubscription = async (req, res) => {
     const user = await User.findById(_id).select("subscriptions");
     // Check if the subscription already exists
     const existingSubscription = user.subscriptions.find(
-      (sub) => sub.type === type // Use 'type' instead of 'status'
+      (sub) => sub.type === type, // Use 'type' instead of 'status'
     );
 
     if (existingSubscription) {
@@ -273,7 +293,7 @@ const removeSubscription = async (req, res) => {
     // Find and remove the subscription
     const user = await User.findById(userId).select("subscriptions");
     const subscriptionIndex = user.subscriptions.findIndex(
-      (sub) => sub._id.toString() === subscriptionId
+      (sub) => sub._id.toString() === subscriptionId,
     );
     if (subscriptionIndex === -1) {
       return sendResponse({
@@ -331,7 +351,7 @@ const getSubscriptions = async (req, res) => {
             return moment(currentSub.endDate).isAfter(moment(maxSub.endDate))
               ? currentSub
               : maxSub;
-          }
+          },
         );
 
         subscriptions.forEach((sub) => {
@@ -412,7 +432,7 @@ const getUserProfile = async (req, res, next, fieldsToPopulate = []) => {
         if (populationConfig) {
           query = query.populate(
             populationConfig.path,
-            populationConfig.select
+            populationConfig.select,
           );
         }
       });
@@ -453,7 +473,7 @@ const getOtherUserProfile = async (req, res, next) => {
 
     const [user, recentReviews] = await Promise.all([
       User.findById(userId).select(
-        "profileIcon name phoneNumber verificationStatus.phoneNumber"
+        "profileIcon name phoneNumber verificationStatus.phoneNumber",
       ),
       Review.find({ object: userId, reviewType: "user" })
         .sort({ createdAt: -1 })
@@ -473,7 +493,7 @@ const getOtherUserProfile = async (req, res, next) => {
       user,
       null,
       [],
-      ["resetToken", "accountState", "metadata"]
+      ["resetToken", "accountState", "metadata"],
     );
 
     // Include phone number if there are bookings with status "booked" or "picked"
@@ -551,7 +571,7 @@ const updateUserProfile = async (req, res, next) => {
         });
       }
       const currency = currenciesData.find(
-        (c) => c.symbol === currencySymbol && c.code === currencyCode
+        (c) => c.symbol === currencySymbol && c.code === currencyCode,
       );
       if (!currency) {
         return sendResponse({
@@ -628,8 +648,6 @@ const updateUserProfile = async (req, res, next) => {
     });
   }
 };
-
-
 
 module.exports = {
   allUsers,

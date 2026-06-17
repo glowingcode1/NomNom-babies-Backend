@@ -20,12 +20,14 @@ const createCountryRateLimiter = createRateLimiter("createCountry", 15, 15); // 
 const updateCountryRateLimiter = createRateLimiter("updateCountry", 15, 15); // 15 requests per 15 minutes
 const deleteCountryRateLimiter = createRateLimiter("deleteCountry", 15, 15); // 15 requests per 15 minutes
 
+
+router.get("/admin/all", auth,adminGetCountries);
+
 // ─── PUBLIC (any logged-in user) ─────────────────────────────────────────────
 router.get("/", auth, getCountries);
 router.get("/:id", auth, getCountryById);
 
-// ─── CONTENT ADMIN + SUPER ADMIN ─────────────────────────────────────────────
-router.get("/admin/all", auth, /**authorizeRoles("contentAdmin", "superAdmin"),**/ adminGetCountries);
+
 router.post("/", auth, /**authorizeRoles("contentAdmin", "superAdmin"),**/ createCountryRateLimiter, createCountry);
 router.put("/:id", auth, /**authorizeRoles("contentAdmin", "superAdmin"),**/ updateCountryRateLimiter, updateCountry);
 router.patch("/:id/toggle", auth, /**authorizeRoles("contentAdmin", "superAdmin"),**/ toggleCountry);

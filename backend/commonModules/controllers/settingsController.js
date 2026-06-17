@@ -1,22 +1,30 @@
-const AdminSettings = require("@models/AdminSettings");
-const { sendResponse, parsePaginationParams, generateMeta } = require("@utils/responseUtil");
+const AdminSettings = require("@models/Settings");
+const {
+  sendResponse,
+  parsePaginationParams,
+  generateMeta,
+} = require("@utils/responseUtil");
 const Faq = require("@models/Faq");
+
+const getSettingByKey = async (key) => {
+  return await AdminSettings.findOne({ key });
+};
 
 // Get Terms and Conditions
 const getTermsAndConditions = async (req, res) => {
   try {
-    const settings = await AdminSettings.findOne({}, "terms_and_conditions");
+    const settings = await getSettingByKey("termsConditions");
     if (!settings) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "terms_and",
+        translationKey: "terms_not_found",
       });
     }
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "terms_and_1",
+      translationKey: "terms_fetched_successfully",
       data: settings,
     });
   } catch (error) {
@@ -32,18 +40,18 @@ const getTermsAndConditions = async (req, res) => {
 // Get About Us
 const getAboutUs = async (req, res) => {
   try {
-    const settings = await AdminSettings.findOne({}, "about_us");
+    const settings = await getSettingByKey("aboutUs");
     if (!settings) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "about_us",
+        translationKey: "about_us_not_found",
       });
     }
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "about_us_1",
+      translationKey: "about_us_fetched_successfully",
       data: settings,
     });
   } catch (error) {
@@ -59,18 +67,18 @@ const getAboutUs = async (req, res) => {
 // Get Privacy Policy
 const getPrivacyPolicy = async (req, res) => {
   try {
-    const settings = await AdminSettings.findOne({}, "privacy_policy");
+    const settings = await getSettingByKey("privacyPolicy");
     if (!settings) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "privacy_policy",
+        translationKey: "privacy_policy_not_found",
       });
     }
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "privacy_policy_1",
+      translationKey: "privacy_policy_fetched_successfully",
       data: settings,
     });
   } catch (error) {
@@ -83,7 +91,7 @@ const getPrivacyPolicy = async (req, res) => {
   }
 };
 
-// Get Privacy Policy
+// Get FAQs
 const getFaqs = async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req);
@@ -101,9 +109,9 @@ const getFaqs = async (req, res) => {
 
     const [faqs, totalRecords] = await Promise.all([
       Faq.find(queryConditions)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit),
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
       Faq.countDocuments(queryConditions),
     ]);
 
@@ -125,34 +133,20 @@ const getFaqs = async (req, res) => {
   }
 };
 
-// Create Admin Settings
-const createAdminSettings = async (req, res) => {
-  const { terms_and_conditions, about_us, privacy_policy, } = req.body;
-
+// Update About-Us
+const updateAboutUs = async (req, res) => {
   try {
-    // Check if AdminSettings already exist
-    const existingSettings = await AdminSettings.findOne();
-    if (existingSettings) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "admin_settings",
-      });
-    }
-
-    // Create new admin settings
-    const newSettings = new AdminSettings({
-      terms_and_conditions: terms_and_conditions || "",
-      about_us: about_us || "",
-      privacy_policy: privacy_policy || "",
-    });
-
-    const savedSettings = await newSettings.save();
+    const { title, content } = req.body;
+    const settings = await AdminSettings.findOneAndUpdate(
+      { key: "aboutUs" },
+      { key: "aboutUs", title, content },
+      { new: true, upsert: true },
+    );
     return sendResponse({
       res,
-      statusCode: 201,
-      translationKey: "admin_settings_1",
-      data: savedSettings,
+      statusCode: 200,
+      translationKey: "about_us_updated",
+      data: settings,
     });
   } catch (error) {
     return sendResponse({
@@ -164,37 +158,111 @@ const createAdminSettings = async (req, res) => {
   }
 };
 
-// Update Admin Settings (Optional: To update multiple fields at once)
-const updateAdminSettings = async (req, res) => {
-  const { id } = req.params;
-  const updateData = {};
-
-  if (req.body.terms_and_conditions)
-    updateData.terms_and_conditions = req.body.terms_and_conditions;
-  if (req.body.about_us) updateData.about_us = req.body.about_us;
-  if (req.body.privacy_policy)
-    updateData.privacy_policy = req.body.privacy_policy;
-
+// Update Privacy Policy
+const updatePrivacyPolicy = async (req, res) => {
   try {
-    const settings = await AdminSettings.findByIdAndUpdate(
-      id,
-      { $set: updateData },
-      { new: true, runValidators: true }
+    const { title, content } = req.body;
+    const settings = await AdminSettings.findOneAndUpdate(
+      { key: "privacyPolicy" },
+      { key: "privacyPolicy", title, content },
+      { new: true, upsert: true },
     );
-
-    if (!settings) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "admin_settings_2",
-      });
-    }
-
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "admin_settings_3",
+      translationKey: "privacy_policy_updated",
       data: settings,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
+  }
+};
+
+// Update Terms and Conditions
+const updateTermsAndConditions = async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    const settings = await AdminSettings.findOneAndUpdate(
+      { key: "termsConditions" },
+      { key: "termsConditions", title, content },
+      { new: true, upsert: true },
+    );
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "terms_and_conditions_updated",
+      data: settings,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
+  }
+};
+
+// Update FAQs
+const updateFaqs = async (req, res) => {
+  try {
+    const faq = await Faq.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "updated_faq_successfully",
+      data: faq,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
+  }
+};
+
+// Delete FAQs
+const deleteFaqs = async (req, res) => {
+  try {
+    const faq = await Faq.findByIdAndDelete(req.params.id);
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "faq_deleted_successfully",
+      data: faq,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
+  }
+};
+
+// Create FAQs
+const createFaqs = async (req, res) => {
+  try {
+    const { question, answer } = req.body;
+    const faq = await Faq.create({
+      question,
+      answer,
+    });
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "faq-created",
+      data: faq,
     });
   } catch (error) {
     return sendResponse({
@@ -210,7 +278,11 @@ module.exports = {
   getTermsAndConditions,
   getAboutUs,
   getPrivacyPolicy,
-  updateAdminSettings,
-  createAdminSettings,
+  updateTermsAndConditions,
+  updateAboutUs,
+  updatePrivacyPolicy,
   getFaqs,
+  createFaqs,
+  updateFaqs,
+  deleteFaqs,
 };

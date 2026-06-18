@@ -12,7 +12,12 @@ const {
 // Get nutrition facts & benefits for a recipe (nutrition page screen)
 const getNutritionByRecipe = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["recipeId"], objectIdFields: ["recipeId"] }))
+    if (
+      !validateParams(req, res, {
+        pathParams: ["recipeId"],
+        objectIdFields: ["recipeId"],
+      })
+    )
       return;
 
     const nutrition = await Nutrition.findOne({
@@ -21,7 +26,11 @@ const getNutritionByRecipe = async (req, res) => {
     }).populate("recipe", "title emoji");
 
     if (!nutrition) {
-      return sendResponse({ res, statusCode: 404, translationKey: "nutrition_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "nutrition_not_found",
+      });
     }
 
     return sendResponse({
@@ -88,15 +97,22 @@ const adminGetNutritions = async (req, res) => {
 // Get single nutrition entry by ID (admin)
 const adminGetNutritionById = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+    if (
+      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
+    )
+      return;
 
     const nutrition = await Nutrition.findById(req.params.id).populate(
       "recipe",
-      "title emoji"
+      "title emoji",
     );
 
     if (!nutrition) {
-      return sendResponse({ res, statusCode: 404, translationKey: "nutrition_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "nutrition_not_found",
+      });
     }
 
     return sendResponse({
@@ -129,13 +145,41 @@ const createNutrition = async (req, res) => {
     const { recipe, nutrients, feedingInsight, allergyReminder } = req.body;
 
     const recipeDoc = await Recipe.findById(recipe);
+
     if (!recipeDoc) {
-      return sendResponse({ res, statusCode: 404, translationKey: "recipe_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "recipe_not_found",
+      });
+    }
+
+    // Validate nutrient names exist in recipe tags
+    const recipeTags = recipeDoc.nutritionTags || [];
+
+    const invalidNutrients = nutrients.filter(
+      (n) => !recipeTags.includes(n.name),
+    );
+
+    if (invalidNutrients.length > 0) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_nutrition_tags",
+        data: {
+          invalidNutrients: invalidNutrients.map((n) => n.name),
+          allowedTags: recipeTags,
+        },
+      });
     }
 
     const existing = await Nutrition.findOne({ recipe });
     if (existing) {
-      return sendResponse({ res, statusCode: 409, translationKey: "nutrition_already_exists" });
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "nutrition_already_exists",
+      });
     }
 
     const nutrition = await Nutrition.create({
@@ -164,18 +208,52 @@ const createNutrition = async (req, res) => {
 // Update nutrition entry
 const updateNutrition = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+    if (
+      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
+    )
+      return;
 
     const nutrition = await Nutrition.findById(req.params.id);
     if (!nutrition) {
-      return sendResponse({ res, statusCode: 404, translationKey: "nutrition_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "nutrition_not_found",
+      });
     }
 
-    const fields = ["nutrients", "feedingInsight", "allergyReminder", "isActive"];
+    const fields = [
+      "nutrients",
+      "feedingInsight",
+      "allergyReminder",
+      "isActive",
+    ];
 
     fields.forEach((field) => {
       if (req.body[field] !== undefined) nutrition[field] = req.body[field];
     });
+
+    if (req.body.nutrients) {
+      const recipeDoc = await Recipe.findById(nutrition.recipe);
+
+      const recipeTags = recipeDoc.nutritionTags || [];
+
+      const invalidNutrients = req.body.nutrients.filter(
+        (n) => !recipeTags.includes(n.name),
+      );
+
+      if (invalidNutrients.length > 0) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "invalid_nutrition_tags",
+          data: {
+            invalidNutrients: invalidNutrients.map((n) => n.name),
+            allowedTags: recipeTags,
+          },
+        });
+      }
+    }
 
     await nutrition.save();
 
@@ -198,11 +276,18 @@ const updateNutrition = async (req, res) => {
 // Delete nutrition entry
 const deleteNutrition = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+    if (
+      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
+    )
+      return;
 
     const nutrition = await Nutrition.findByIdAndDelete(req.params.id);
     if (!nutrition) {
-      return sendResponse({ res, statusCode: 404, translationKey: "nutrition_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "nutrition_not_found",
+      });
     }
 
     return sendResponse({

@@ -6,6 +6,7 @@ const createRateLimiter = require("@utils/rateLimiter");
 const {
   getBabyStages,
   getBabyStageById,
+  selectBabyStage,
   adminGetBabyStages,
   createBabyStage,
   updateBabyStage,
@@ -22,6 +23,7 @@ const deleteStageRateLimiter = createRateLimiter("deleteBabyStage", 15, 15); // 
 // PUBLIC (any logged-in user) 
 router.get("/", auth, getBabyStages);
 router.get("/:id", auth, getBabyStageById);
+router.post("/select", auth, selectBabyStage);
 
 //  CONTENT ADMIN + SUPER ADMIN 
 router.get("/admin/all", auth, /**authorizeRoles("contentAdmin", "superAdmin"),**/ adminGetBabyStages);

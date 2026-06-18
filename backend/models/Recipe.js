@@ -11,6 +11,15 @@ const recipeSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    image: {
+      type: String,
+      default: "",
+    },
+    difficulty: {
+      type: String,
+      enum: ["easy", "medium", "hard"],
+      default: "easy",
+    },
     prepTime: {
       type: Number, // in minutes
       required: true,
@@ -64,7 +73,7 @@ const recipeSchema = new mongoose.Schema(
       default: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Recipe = mongoose.models.Recipe || mongoose.model("Recipe", recipeSchema);

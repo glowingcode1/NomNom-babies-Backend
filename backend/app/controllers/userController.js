@@ -11,7 +11,6 @@ const { NotificationTypes } = require("@models/Notifications");
 const validator = require("validator");
 const { userCache } = require("@config/nodeCache");
 
-
 // Block User Function
 const blockUser = async (req, res) => {
   const { _id } = req.user;
@@ -171,7 +170,7 @@ const addOrUpdateSubscription = async (req, res) => {
     const user = await User.findById(_id).select("subscriptions");
     // Check if the subscription already exists
     const existingSubscription = user.subscriptions.find(
-      (sub) => sub.type === type // Use 'type' instead of 'status'
+      (sub) => sub.type === type, // Use 'type' instead of 'status'
     );
 
     if (existingSubscription) {
@@ -230,7 +229,7 @@ const removeSubscription = async (req, res) => {
     // Find and remove the subscription
     const user = await User.findById(userId).select("subscriptions");
     const subscriptionIndex = user.subscriptions.findIndex(
-      (sub) => sub._id.toString() === subscriptionId
+      (sub) => sub._id.toString() === subscriptionId,
     );
     if (subscriptionIndex === -1) {
       return sendResponse({
@@ -288,7 +287,7 @@ const getSubscriptions = async (req, res) => {
             return moment(currentSub.endDate).isAfter(moment(maxSub.endDate))
               ? currentSub
               : maxSub;
-          }
+          },
         );
 
         subscriptions.forEach((sub) => {
@@ -360,7 +359,10 @@ const getUserProfile = async (req, res, next, fieldsToPopulate = []) => {
   try {
     const currentUser = req.user;
 
-    let query = User.findById(currentUser._id);
+    let query = User.findById(currentUser._id).populate(
+      "onboarding.selectedCountries",
+      "name signatureFoods",
+    );
 
     // Build the dynamic population based on the fields requested
     if (fieldsToPopulate.length > 0) {
@@ -369,7 +371,7 @@ const getUserProfile = async (req, res, next, fieldsToPopulate = []) => {
         if (populationConfig) {
           query = query.populate(
             populationConfig.path,
-            populationConfig.select
+            populationConfig.select,
           );
         }
       });
@@ -410,7 +412,7 @@ const getOtherUserProfile = async (req, res, next) => {
 
     const [user, recentReviews] = await Promise.all([
       User.findById(userId).select(
-        "profileIcon name phoneNumber verificationStatus.phoneNumber"
+        "profileIcon name phoneNumber verificationStatus.phoneNumber",
       ),
       Review.find({ object: userId, reviewType: "user" })
         .sort({ createdAt: -1 })
@@ -430,7 +432,7 @@ const getOtherUserProfile = async (req, res, next) => {
       user,
       null,
       [],
-      ["resetToken", "accountState", "metadata"]
+      ["resetToken", "accountState", "metadata"],
     );
 
     // Include phone number if there are bookings with status "booked" or "picked"
@@ -561,8 +563,6 @@ const updateUserProfile = async (req, res, next) => {
     });
   }
 };
-
-
 
 module.exports = {
   blockUser,

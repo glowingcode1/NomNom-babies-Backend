@@ -91,10 +91,7 @@ const userSchema = new mongoose.Schema(
     accountState: {
       userType: {
         type: String,
-        enum: [
-          "user",
-          "admin",
-        ],
+        enum: ["user", "admin"],
         default: "user",
       },
       status: {
@@ -185,6 +182,19 @@ const userSchema = new mongoose.Schema(
     language: {
       type: String,
       default: "en",
+    },
+
+    onboarding: {
+      selectedCountries: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Country",
+        },
+      ],
+      completed: {
+        type: Boolean,
+        default: false,
+      },
     },
 
     blockedUsers: {

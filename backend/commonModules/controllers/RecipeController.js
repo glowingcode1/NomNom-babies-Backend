@@ -25,7 +25,9 @@ const getRecipes = async (req, res) => {
       Recipe.find(query)
         .populate("country", "name")
         .populate("babyStage", "title")
-        .select("title emoji prepTime mealType nutritionTags country babyStage")
+        .select(
+          "title emoji image prepTime mealType nutritionTags country babyStage difficulty",
+        )
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit),
@@ -54,7 +56,10 @@ const getRecipes = async (req, res) => {
 // Get single recipe detail
 const getRecipeById = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+    if (
+      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
+    )
+      return;
 
     const recipe = await Recipe.findOne({
       _id: req.params.id,
@@ -65,7 +70,11 @@ const getRecipeById = async (req, res) => {
       .populate("babyStage", "title features");
 
     if (!recipe) {
-      return sendResponse({ res, statusCode: 404, translationKey: "recipe_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "recipe_not_found",
+      });
     }
 
     return sendResponse({
@@ -186,17 +195,33 @@ const createRecipe = async (req, res) => {
 // Update a recipe
 const updateRecipe = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+    if (
+      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
+    )
+      return;
 
     const recipe = await Recipe.findById(req.params.id);
     if (!recipe) {
-      return sendResponse({ res, statusCode: 404, translationKey: "recipe_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "recipe_not_found",
+      });
     }
 
     const fields = [
-      "title", "emoji", "prepTime", "country", "babyStage",
-      "mealType", "nutritionTags", "ingredients", "method",
-      "notes", "acceptanceLabel", "isActive",
+      "title",
+      "emoji",
+      "prepTime",
+      "country",
+      "babyStage",
+      "mealType",
+      "nutritionTags",
+      "ingredients",
+      "method",
+      "notes",
+      "acceptanceLabel",
+      "isActive",
     ];
 
     fields.forEach((field) => {
@@ -224,23 +249,38 @@ const updateRecipe = async (req, res) => {
 // Change recipe status (draft → pending → published → archived)
 const updateRecipeStatus = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"], rawData: ["status"] })) return;
+    if (
+      !validateParams(req, res, {
+        pathParams: ["id"],
+        objectIdFields: ["id"],
+        rawData: ["status"],
+      })
+    )
+      return;
 
     const { status } = req.body;
     const allowed = ["draft", "pending", "published", "archived"];
 
     if (!allowed.includes(status)) {
-      return sendResponse({ res, statusCode: 400, translationKey: "invalid_status" });
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_status",
+      });
     }
 
     const recipe = await Recipe.findByIdAndUpdate(
       req.params.id,
       { status },
-      { new: true }
+      { new: true },
     );
 
     if (!recipe) {
-      return sendResponse({ res, statusCode: 404, translationKey: "recipe_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "recipe_not_found",
+      });
     }
 
     return sendResponse({
@@ -262,11 +302,18 @@ const updateRecipeStatus = async (req, res) => {
 // Delete a recipe
 const deleteRecipe = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+    if (
+      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
+    )
+      return;
 
     const recipe = await Recipe.findByIdAndDelete(req.params.id);
     if (!recipe) {
-      return sendResponse({ res, statusCode: 404, translationKey: "recipe_not_found" });
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "recipe_not_found",
+      });
     }
 
     return sendResponse({

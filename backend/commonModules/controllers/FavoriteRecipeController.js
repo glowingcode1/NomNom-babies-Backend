@@ -1,0 +1,143 @@
+const FavoriteRecipe = require("@models/FavoriteRecipe");
+const Recipe = require("@models/Recipe");
+
+const { sendResponse, validateParams } = require("@utils/responseUtil");
+
+// Add recipe to favorites
+const addFavorite = async (req, res) => {
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["recipeId"],
+        objectIdFields: ["recipeId"],
+      })
+    ) {
+      return;
+    }
+
+    const { recipeId } = req.params;
+    const userId = req.user._id;
+
+    const recipe = await Recipe.findById(recipeId);
+
+    if (!recipe) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "recipe_not_found",
+      });
+    }
+
+    const existingFavorite = await FavoriteRecipe.findOne({
+      user: userId,
+      recipe: recipeId,
+    });
+
+    if (existingFavorite) {
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "recipe_already_favorited",
+      });
+    }
+
+    const favorite = await FavoriteRecipe.create({
+      user: userId,
+      recipe: recipeId,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 201,
+      translationKey: "recipe_favorited_success",
+      data: favorite,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+// Remove favorite
+const removeFavorite = async (req, res) => {
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["recipeId"],
+        objectIdFields: ["recipeId"],
+      })
+    ) {
+      return;
+    }
+
+    const { recipeId } = req.params;
+    const userId = req.user._id;
+
+    const favorite = await FavoriteRecipe.findOneAndDelete({
+      user: userId,
+      recipe: recipeId,
+    });
+
+    if (!favorite) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "favorite_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "favorite_removed_success",
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+// Get user favorites
+const getFavorites = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const favorites = await FavoriteRecipe.find({
+      user: userId,
+    })
+      .populate({
+        path: "recipe",
+        select:
+          "title emoji image prepTime mealType nutritionTags acceptanceLabel difficulty",
+      })
+      .sort({ createdAt: -1 });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: favorites,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = {
+  addFavorite,
+  removeFavorite,
+  getFavorites,
+};

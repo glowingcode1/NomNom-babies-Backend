@@ -1,4 +1,5 @@
 const BabyStage = require("@models/BabyStage");
+const Baby = require("@models/Baby");
 const { User } = require("@models/UserModel");
 const {
   sendResponse,
@@ -89,20 +90,29 @@ const selectBabyStage = async (req, res) => {
       });
     }
 
-    const user = await User.findByIdAndUpdate(
-      req.user._id,
-      {
-        "onboarding.babyStage": stage._id,
-        "onboarding.babyName": babyName.trim(),
-      },
-      { new: true }
-    ).populate("onboarding.babyStage", "title features");
+    const baby = await Baby.create({
+      user: req.user._id,
+      name: babyName.trim(),
+      babyStage: stage._id,
+    });
+
+    const user = await User.findById(req.user._id);
+
+    if (!user.activeBaby) {
+      user.activeBaby = baby._id;
+    }
+
+    user.onboarding.completed = true;
+
+    await user.save();
+
+    await baby.populate("babyStage", "title features");
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "baby_stage_selected_success",
-      data: { onboarding: user.onboarding },
+      data: baby,
     });
   } catch (error) {
     return sendResponse({

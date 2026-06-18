@@ -51,25 +51,14 @@ const createLanguage = async (req, res) => {
 
 // Get all languages with pagination
 const getLanguages = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-
   try {
-    const [languages, totalLanguages] = await Promise.all([
-      Language.find({ active: true })
-        .sort({ title: 1 }) // Sort by title in alphabetical order
-        .skip((page - 1) * limit)
-        .limit(limit),
-      Language.countDocuments({ active: true }),
-    ]);
-
-    const meta = generateMeta(page, limit, totalLanguages);
+    const languages = await Language.find({ active: true }).sort({ title: 1 });
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "languages_fetched_success", // Translation key for success
+      translationKey: "languages_fetched_success",
       data: languages,
-      meta,
     });
   } catch (error) {
     return sendResponse({
@@ -86,7 +75,6 @@ const updateLanguage = async (req, res) => {
   const { id } = req.params;
   const { title, transliteration, flag, code, active } = req.body;
   try {
-
     const validationOptions = {
       pathParams: ["id"],
       objectIdFields: ["id"],
@@ -142,7 +130,6 @@ const deleteLanguage = async (req, res) => {
   const { id } = req.params;
 
   try {
-
     const validationOptions = {
       pathParams: ["id"],
       objectIdFields: ["id"],
@@ -182,6 +169,15 @@ const updateUserLanguage = async (req, res) => {
   const { _id: userId } = req.user;
   const { languageId } = req.body;
 
+  const validationOptions = {
+    rawData: ["languageId"],
+    objectIdFields: ["languageId"],
+  };
+
+  if (!validateParams(req, res, validationOptions)) {
+    return;
+  }
+
   try {
     const user = await User.findById(userId);
     if (!user) {
@@ -203,7 +199,7 @@ const updateUserLanguage = async (req, res) => {
 
     user.language = language.code;
     await user.save();
-    userCache.del(userId.toString())
+    userCache.del(userId.toString());
     return sendResponse({
       res,
       statusCode: 200,

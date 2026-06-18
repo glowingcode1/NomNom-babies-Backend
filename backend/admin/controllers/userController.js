@@ -423,7 +423,10 @@ const getUserProfile = async (req, res, next, fieldsToPopulate = []) => {
   try {
     const currentUser = req.user;
 
-    let query = User.findById(currentUser._id);
+    let query = User.findById(currentUser._id).populate(
+      "onboarding.selectedCountries",
+      "name signatureFoods",
+    );
 
     // Build the dynamic population based on the fields requested
     if (fieldsToPopulate.length > 0) {

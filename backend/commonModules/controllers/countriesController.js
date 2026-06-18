@@ -122,7 +122,10 @@ const selectCountries = async (req, res) => {
     // Save to user
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { "onboarding.selectedCountries": countryIds },
+      {
+        "onboarding.selectedCountries": countryIds,
+        "onboarding.completed": true,
+      },
       { new: true },
     ).populate("onboarding.selectedCountries", "name signatureFoods");
 
@@ -197,9 +200,9 @@ const updateCountry = async (req, res) => {
       const clash = await Country.findOne({
         _id: { $ne: req.params.id },
         $or: [
-          ...(name? [{ name: name.trim() }] : []),
-          ...(code? [{ code: code.trim().toUpperCase() }] : []),
-        ]
+          ...(name ? [{ name: name.trim() }] : []),
+          ...(code ? [{ code: code.trim().toUpperCase() }] : []),
+        ],
       });
       if (clash) {
         return sendResponse({
@@ -215,8 +218,8 @@ const updateCountry = async (req, res) => {
       {
         $set: {
           ...(name !== undefined && { name: name.trim() }),
-          ...(code !== undefined && { code: code.trim().toUpperCase(),}),
-          ...(status !== undefined && { status}),
+          ...(code !== undefined && { code: code.trim().toUpperCase() }),
+          ...(status !== undefined && { status }),
           ...(signatureFoods !== undefined && { signatureFoods }),
           ...(isEnabled !== undefined && { isEnabled }),
         },
@@ -265,9 +268,7 @@ const toggleCountry = async (req, res) => {
       country.status = "disabled";
     }
 
-    if (
-      country.isEnabled && country.status === "disabled"
-    ) {
+    if (country.isEnabled && country.status === "disabled") {
       country.status = "active";
     }
     await country.save();
@@ -322,14 +323,14 @@ const adminGetCountries = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
   try {
-    const { search = "", status, enabled, } = req.query;
+    const { search = "", status, enabled } = req.query;
 
     const query = {};
 
-    if(search) {
+    if (search) {
       query.$or = [
-        { name: {$regex: search, $options: "i" }},
-        { code: {$regex: search, $options: "i" }},
+        { name: { $regex: search, $options: "i" } },
+        { code: { $regex: search, $options: "i" } },
       ];
     }
 

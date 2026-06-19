@@ -5,6 +5,7 @@ const {
   parsePaginationParams,
   generateMeta,
 } = require("@utils/responseUtil");
+const Baby = require("@models/Baby");
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -126,6 +127,112 @@ const adminGetRecipes = async (req, res) => {
       translationKey: "data_fetched_successfully",
       data: recipes,
       meta,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const getUserRecipes = async (req, res) => {
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["userId"],
+        objectIdFields: ["userId"],
+      })
+    )
+      return;
+
+    const babies = await Baby.find({
+      user: req.params.userId,
+      isActive: true,
+    });
+
+    if (!babies.length) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "data_fetched_successfully",
+        data: [],
+      });
+    }
+
+    const stageIds = babies.map((baby) => baby.babyStage).filter(Boolean);
+
+    const countryIds = babies.flatMap((baby) => baby.selectedCountries || []);
+
+    const recipes = await Recipe.find({
+      status: "published",
+      isActive: true,
+      $or: [{ babyStage: { $in: stageIds } }, { country: { $in: countryIds } }],
+    })
+      .populate("country", "name")
+      .populate("babyStage", "title")
+      .select(
+        "title emoji image prepTime mealType nutritionTags difficulty country babyStage",
+      )
+      .sort({ createdAt: -1 });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: recipes,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const getUserBabyRecipes = async (req, res) => {
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["userId", "babyId"],
+        objectIdFields: ["userId", "babyId"],
+      })
+    )
+      return;
+
+    const baby = await Baby.findOne({
+      _id: req.params.babyId,
+      user: req.params.userId,
+      isActive: true,
+    });
+
+    if (!baby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const recipes = await Recipe.find({
+      status: "published",
+      isActive: true,
+      babyStage: baby.babyStage,
+      country: { $in: baby.selectedCountries },
+    })
+      .populate("country", "name")
+      .populate("babyStage", "title")
+      .sort({ createdAt: -1 });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: recipes,
     });
   } catch (error) {
     return sendResponse({
@@ -335,6 +442,8 @@ module.exports = {
   getRecipes,
   getRecipeById,
   adminGetRecipes,
+  getUserRecipes,
+  getUserBabyRecipes,
   createRecipe,
   updateRecipe,
   updateRecipeStatus,

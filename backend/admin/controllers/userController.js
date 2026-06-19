@@ -11,10 +11,11 @@ const validator = require("validator");
 const { userCache } = require("@config/nodeCache");
 const fs = require("fs");
 const path = require("path");
+const Baby = require("@models/Baby");
 // Path to the JSON file
 const currenciesFilePath = path.join(
-  __dirname,
-  "@assets/currencies/currencies.json",
+  process.cwd(),
+  "backend/assets/currencies/currencies.json"
 );
 
 // Function to read the JSON file and parse it
@@ -39,30 +40,84 @@ const allUsers = async (req, res) => {
 
     const query = {
       "accountState.userType": { $ne: "admin" },
+      // "accountState.status": { $ne: "hardDeleted" },
+      "accountState.status": {
+        $nin: ["softDeleted", "hardDeleted"],
+      },
     };
     if (keyword?.trim()) {
       query.$or = [
         { name: { $regex: keyword, $options: "i" } },
         { email: { $regex: keyword, $options: "i" } },
-        { phoneNumber: { $regex: keyword, $options: "i" } },
+        { phoneNumber: { $exists: true, $regex: keyword, $options: "i" } },
       ];
     }
 
     const [users, totalRecords] = await Promise.all([
       User.find(query)
         .select("-password -resetToken -otpInfo")
+        .populate("onboarding.selectedCountries", "name")
         .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(Number(limit)),
+        .skip((page - 1) * Number(limit))
+        .limit(Number(limit))
+        .lean(),
 
       User.countDocuments(query),
     ]);
+
+    const userIds = users.map((user) => user._id);
+
+    const babies = await Baby.find({
+      user: { $in: userIds },
+    })
+
+      .populate("selectedCountries", "name")
+      .lean();
+
+    const babiesMap = {};
+
+    babies.forEach((baby) => {
+      const userId = baby.user.toString();
+
+      if (!babiesMap[userId]) {
+        babiesMap[userId] = [];
+      }
+
+      babiesMap[userId].push({
+        id: baby._id,
+        name: baby.name,
+        avatar: "",
+        status: baby.isActive ? "active" : "inActive",
+        foodCultures:
+          baby.selectedCountries?.map((country) => country.name) || [],
+      });
+    });
+
+    const formattedUsers = users.map((user) => ({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      avatar: user.profileIcon || "",
+
+      status:
+        user.accountState?.status === "active"
+          ? "active"
+          : user.accountState?.status === "inactive"
+            ? "inactive"
+            : "inactive",
+
+      foodCultures:
+        user.onboarding?.selectedCountries?.map((country) => country.name) ||
+        [],
+
+      babies: babiesMap[user._id.toString()] || [],
+    }));
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "users_fetched_successfully",
-      data: users,
+      data: formattedUsers,
       meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
@@ -70,7 +125,137 @@ const allUsers = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "something_went_wrong",
-      error,
+      error: error.message,
+    });
+  }
+};
+
+const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id)
+      .select("-password -resetToken -otpInfo")
+      .populate("onboarding.selectedCountries", "name")
+      .lean();
+
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+
+    const babies = await Baby.find({
+      user: user._id,
+    })
+      .populate("selectedCountries", "name")
+      .lean();
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "user_fetched_successfully",
+      data: {
+        ...user,
+        babies,
+      },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "something_went_wrong",
+      error: error.message,
+    });
+  }
+};
+
+
+const updateUserStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const { status, reason = "" } = req.body;
+
+    const allowedStatuses = ["active", "inactive", "suspended", "restricted"];
+
+    if (!allowedStatuses.includes(status)) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_status",
+      });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+
+    user.accountState.status = status;
+    user.accountState.reason = reason;
+
+    if (status === "suspended") {
+      user.accountState.suspensionDate = new Date();
+    }
+
+    await user.save();
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "user_status_updated",
+      data: user,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "something_went_wrong",
+      error: error.message,
+    });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+
+    // For SoftDelete
+    // user.accountState.status = "softDeleted";
+    // await user.save();
+
+    // For Permanent Delete
+    await User.findByIdAndDelete(id);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "user_deleted_successfully",
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "something_went_wrong",
+      error: error.message,
     });
   }
 };
@@ -654,6 +839,9 @@ const updateUserProfile = async (req, res, next) => {
 
 module.exports = {
   allUsers,
+  getUserById,
+  updateUserStatus,
+  deleteUser,
   blockUser,
   reportUser,
   addOrUpdateSubscription,

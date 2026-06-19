@@ -47,7 +47,9 @@ require("module-alias/register");
 const { i18nConfig } = require("@config/i18nConfig");
 const { securityMiddleware } = require("@middlewares/security");
 const { initTextModeration } = require("@services/moderation/textModeration");
-const { textModerationMiddleware } = require("@services/moderation/textModeration");
+const {
+  textModerationMiddleware,
+} = require("@services/moderation/textModeration");
 
 const { sendResponse } = require("@utils/responseUtil");
 
@@ -77,24 +79,26 @@ if (!fs.existsSync(swaggerDir)) {
   fs.mkdirSync(swaggerDir, { recursive: true });
 }
 
-  if (!fs.existsSync(swaggerFilePath)) {
-    const defaultSwagger = {
-      openapi: "3.0.0",
-      info: {
-        title: "MERN Boilerplate API",
-        description: "API documentation for MERN Boilerplate",
-        version: "1.0.0",
+if (!fs.existsSync(swaggerFilePath)) {
+  const defaultSwagger = {
+    openapi: "3.0.0",
+    info: {
+      title: "MERN Boilerplate API",
+      description: "API documentation for MERN Boilerplate",
+      version: "1.0.0",
+    },
+    servers: [
+      { url: "http://localhost:4001/api", description: "Development server" },
+    ],
+    paths: {},
+    components: {
+      securitySchemes: {
+        bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
       },
-      servers: [{ url: "http://localhost:4001/api", description: "Development server" }],
-      paths: {},
-      components: {
-        securitySchemes: {
-          bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
-        },
-      },
-    };
-    fs.writeFileSync(swaggerFilePath, JSON.stringify(defaultSwagger, null, 2));
-  }
+    },
+  };
+  fs.writeFileSync(swaggerFilePath, JSON.stringify(defaultSwagger, null, 2));
+}
 
 const swaggerFile = require("../swagger/swagger_output.json");
 const { allowedOrigins } = require("@config/origins");
@@ -106,6 +110,13 @@ const { allowedOrigins } = require("@config/origins");
  */
 const app = express();
 app.set("trust proxy", 1);
+
+// Routes
+app.get("/", (req, res) => {
+  res.send("Hello from Node.js!");
+});
+app.get("/favicon.ico", (req, res) => res.status(204).end());
+app.get("/favicon.png", (req, res) => res.status(204).end());
 
 /**
  * ------------------------------------------------
@@ -139,7 +150,6 @@ securityMiddleware(app, {
   rateLimitWindow: 15 * 60 * 1000,
   rateLimitMax: 200,
 });
-
 
 /**
  * =======================================================
@@ -202,14 +212,12 @@ app.use((err, req, res, next) => {
   });
 });
 
-
 /**
  * =======================================================
  * Socket + HTTP Server
  * =======================================================
  */
 const server = createSocketServer(app, allowedOrigins);
-
 
 const PORT = process.env.PORT || 8080;
 
@@ -219,7 +227,6 @@ server.listen(PORT, () => {
     env: process.env.NODE_ENV,
   });
 });
-
 
 /**
  * =======================================================
@@ -239,11 +246,8 @@ server.listen(PORT, () => {
       error: err.message,
       stack: err.stack,
     });
-
   }
 })();
-
-
 
 /**
  * =======================================================

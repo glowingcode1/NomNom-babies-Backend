@@ -44,8 +44,9 @@ const register = async (req, res) => {
             "parentCaregiverName",
             "email",
             "password",
-            "confirmPassword",
             "timezone",
+            "deviceId",
+            "deviceType",
           ],
       minLengthFields: {
         password: 6,
@@ -62,19 +63,12 @@ const register = async (req, res) => {
       parentCaregiverName,
       email,
       password,
-      confirmPassword,
       acceptTerms,
       timezone,
       language = "en",
+      deviceId,
+      deviceType,
     } = req.body;
-
-    if (!isAdminSignup && password !== confirmPassword) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "passwords_do_not_match",
-      });
-    }
 
     if (!isAdminSignup && !acceptTerms) {
       return sendResponse({
@@ -139,6 +133,9 @@ const register = async (req, res) => {
 
     const otp = user.generateOtp("email", timezone);
     await user.save();
+    if (deviceId && deviceType) {
+      await createOrSkipDevice(user._id, deviceId, deviceType);
+    }
 
     const token = user.generateAuthToken();
     const response = await getFormattedUserResponse(user, token);
@@ -478,6 +475,81 @@ const verifyOtp = async (req, res) => {
   }
 };
 
+// Forget Password
+const forgetPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const validationOptions = {
+      rawData: ["email"],
+    };
+
+    if (!validateParams(req, res, validationOptions)) {
+      return;
+    }
+
+    if (!validator.isEmail(String(email || "").trim())) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "email_invalid",
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await User.findOne({
+      email: normalizedEmail,
+    });
+
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+
+    if (["restricted", "suspended"].includes(user.accountState?.status)) {
+      return sendResponse({
+        res,
+        statusCode: 403,
+        translationKey: "your_account_4",
+      });
+    }
+
+    const otp = user.generateOtp("email", user.timezone || "Asia/Karachi");
+
+    if (otp?.error === "too_many_otp_requests") {
+      return sendResponse({
+        res,
+        statusCode: 429,
+        translationKey: "too_many_otp_requests",
+      });
+    }
+
+    await user.save();
+
+    const subject = "Password Reset OTP";
+    const html = forgotPasswordOtpEmailTemplate(otp);
+
+    await sendEmailViaBrevo([normalizedEmail], subject, html);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "otp_sent_successfully",
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: error.message,
+      error,
+    });
+  }
+};
+
 // Reset Password
 const resetPassword = async (req, res) => {
   try {
@@ -699,7 +771,7 @@ const socialAuth = async (req, res) => {
         accountState: {
           userType: "user",
           status: "active",
-        }
+        },
       });
 
       await newUser.save({ session });
@@ -741,6 +813,7 @@ module.exports = {
   getMe,
   generateOtp,
   verifyOtp,
+  forgetPassword,
   resetPassword,
   logout,
   deleteAccount,

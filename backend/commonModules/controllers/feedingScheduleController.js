@@ -1,15 +1,12 @@
 const FeedingSchedule = require("@models/FeedingSchedule");
 const FeedingLog = require("@models/FeedingLog");
-const {
-  sendResponse,
-  validateParams,
-} = require("@utils/responseUtil");
+const { sendResponse, validateParams } = require("@utils/responseUtil");
+const Recipe = require("@models/Recipe");
 
 // Get feeding schedule for active baby on a given date
 const getFeedingSchedule = async (req, res) => {
   try {
-    const { babyId, date } = req.query; // date: "YYYY-MM-DD"
-
+    const { babyId, date } = req.query;
     if (!babyId || !date) {
       return sendResponse({
         res,
@@ -21,7 +18,7 @@ const getFeedingSchedule = async (req, res) => {
     const schedule = await FeedingSchedule.findOne({
       baby: babyId,
       user: req.user._id,
-    });
+    }).populate("slots.recipe", "title emoji image prepTime");
 
     if (!schedule) {
       return sendResponse({
@@ -31,7 +28,6 @@ const getFeedingSchedule = async (req, res) => {
       });
     }
 
-    // Get completion logs for this baby on this date
     const logs = await FeedingLog.find({
       baby: babyId,
       user: req.user._id,
@@ -40,12 +36,21 @@ const getFeedingSchedule = async (req, res) => {
 
     const completedSlotIds = new Set(logs.map((l) => String(l.slotId)));
 
-    // Merge completion status into slots
     const slots = schedule.slots.map((slot) => ({
       _id: slot._id,
+
+      type: slot.type,
+
       time: slot.time,
+
       title: slot.title,
+
       description: slot.description,
+
+      amount: slot.amount,
+
+      recipe: slot.recipe,
+
       completed: completedSlotIds.has(String(slot._id)),
     }));
 
@@ -57,12 +62,96 @@ const getFeedingSchedule = async (req, res) => {
       translationKey: "data_fetched_successfully",
       data: {
         scheduleId: schedule._id,
+
         slots,
+
         progress: {
           completed: completedCount,
           total: slots.length,
         },
       },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const getScheduleSlotDetail = async (req, res) => {
+  try {
+    const { slotId } = req.params;
+    const schedule = await FeedingSchedule.findOne({
+      "slots._id": slotId,
+      user: req.user._id,
+    }).populate({
+      path: "slots.recipe",
+      populate: {
+        path: "country babyStage",
+      },
+    });
+
+    if (!schedule) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "feeding_schedule_not_found",
+      });
+    }
+
+    const slot = schedule.slots.id(slotId);
+
+    if (!slot) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "feeding_slot_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: slot,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const removeScheduleSlot = async (req, res) => {
+  try {
+    const { slotId } = req.params;
+    const schedule = await FeedingSchedule.findOne({
+      "slots._id": slotId,
+      user: req.user._id,
+    });
+
+    if (!schedule) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "feeding_schedule_not_found",
+      });
+    }
+
+    schedule.slots.pull(slotId);
+
+    await schedule.save();
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "feeding_slot_deleted_success",
     });
   } catch (error) {
     return sendResponse({
@@ -120,7 +209,10 @@ const createFeedingSchedule = async (req, res) => {
 // Update feeding schedule slots
 const updateFeedingSchedule = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+    if (
+      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
+    )
+      return;
 
     const { slots } = req.body;
 
@@ -159,7 +251,10 @@ const updateFeedingSchedule = async (req, res) => {
 // Delete feeding schedule
 const deleteFeedingSchedule = async (req, res) => {
   try {
-    if (!validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })) return;
+    if (
+      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
+    )
+      return;
 
     const schedule = await FeedingSchedule.findOneAndDelete({
       _id: req.params.id,
@@ -189,10 +284,85 @@ const deleteFeedingSchedule = async (req, res) => {
   }
 };
 
+const getUserFeedingSchedules = async (req, res) => {
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["userId"],
+        objectIdFields: ["userId"],
+      })
+    )
+      return;
+
+    const schedules = await FeedingSchedule.find({
+      user: req.params.userId,
+    })
+      .populate("baby", "name")
+      .populate("slots.recipe", "title emoji image prepTime")
+      .sort({ createdAt: -1 });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: schedules,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const getUserBabyFeedingSchedule = async (req, res) => {
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["userId", "babyId"],
+        objectIdFields: ["userId", "babyId"],
+      })
+    )
+      return;
+
+    const schedule = await FeedingSchedule.findOne({
+      user: req.params.userId,
+      baby: req.params.babyId,
+    })
+      .populate("baby", "name")
+      .populate("slots.recipe", "title emoji image prepTime");
+
+    if (!schedule) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "feeding_schedule_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: schedule,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
 // Mark / unmark a slot as completed for a given date
 const toggleSlotCompletion = async (req, res) => {
   try {
-    if (!validateParams(req, res, { rawData: ["babyId", "slotId", "date"] })) return;
+    if (!validateParams(req, res, { rawData: ["babyId", "slotId", "date"] }))
+      return;
 
     const { babyId, slotId, date } = req.body;
 
@@ -241,6 +411,10 @@ const toggleSlotCompletion = async (req, res) => {
 
 module.exports = {
   getFeedingSchedule,
+  getUserFeedingSchedules,
+  getUserBabyFeedingSchedule,
+  getScheduleSlotDetail,
+  removeScheduleSlot,
   createFeedingSchedule,
   updateFeedingSchedule,
   deleteFeedingSchedule,

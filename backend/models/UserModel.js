@@ -225,7 +225,7 @@ const userSchema = new mongoose.Schema(
       type: [subscriptionSchema],
       default: [
         {
-          status: SubscriptionType.PLAN1,
+          type: SubscriptionType.PLAN1,
           startDate: null,
           endDate: null, // No expiry for the default subscription
         },

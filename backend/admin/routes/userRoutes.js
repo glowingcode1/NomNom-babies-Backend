@@ -11,8 +11,12 @@ const {
   getUserProfile,
   updateUserProfile,
   getOtherUserProfile,
+  getUserById,
+  updateUserStatus,
+  deleteUser,
 } = require("../controllers/userController");
 const roleMiddleware = require("@middlewares/roleMiddleware");
+const { getUserBabies } = require("@controllersCommonModules/BabyController");
 const router = express.Router();
 
 // Apply auth middleware to the router
@@ -32,8 +36,13 @@ router.get("/profile/:userId", (req, res, next) => {
   getOtherUserProfile(req, res, next);
 });
 
-router.put("/profile", updateUserProfile)
+
+router.put("/profile", updateUserProfile);
 router.get("/allUsers", roleMiddleware(["admin"]), allUsers);
+router.get("/:id/babies", roleMiddleware(["admin"]), getUserBabies);
+router.get("/:id", roleMiddleware(["admin"]), getUserById);
+router.patch("/:id/status", roleMiddleware(["admin"]), updateUserStatus);
+router.delete("/:id", roleMiddleware(["admin"]), deleteUser);
 router.post("/:userIdToBlock/block", blockUser);
 router.post("/:userIdToReport/report", reportUser);
 router.post("/add-update-subscription", addOrUpdateSubscription);

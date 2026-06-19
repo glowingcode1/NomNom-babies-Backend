@@ -8,6 +8,10 @@ const {
   updateFeedingSchedule,
   deleteFeedingSchedule,
   toggleSlotCompletion,
+  removeScheduleSlot,
+  getScheduleSlotDetail,
+  getUserFeedingSchedules,
+  getUserBabyFeedingSchedule,
 } = require("../controllers/feedingScheduleController");
 
 const router = express.Router();
@@ -19,6 +23,15 @@ const toggleLimiter = createRateLimiter("toggleSlotCompletion", 30, 15);
 
 router.get("/", auth, getFeedingSchedule);
 router.post("/", auth, createLimiter, createFeedingSchedule);
+router.get("/slot/:slotId", auth, getScheduleSlotDetail);
+router.get("/admin/user/:userId", auth, getUserFeedingSchedules);
+
+router.get(
+  "/admin/user/:userId/baby/:babyId",
+  auth,
+  getUserBabyFeedingSchedule,
+);
+router.delete("/slot/:slotId", auth, removeScheduleSlot);
 router.put("/:id", auth, updateLimiter, updateFeedingSchedule);
 router.delete("/:id", auth, deleteLimiter, deleteFeedingSchedule);
 router.patch("/toggle", auth, toggleLimiter, toggleSlotCompletion);

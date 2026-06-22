@@ -28,6 +28,10 @@ const feedingSlotSchema = new mongoose.Schema({
     ref: "Recipe",
     default: null,
   },
+  isOptional: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const feedingScheduleSchema = new mongoose.Schema(

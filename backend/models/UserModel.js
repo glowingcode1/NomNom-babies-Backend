@@ -61,6 +61,18 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    deviceInfo: {
+      deviceId: {
+        type: String,
+        default: "",
+      },
+      deviceType: {
+        type: String,
+        enum: ["android", "ios", "web"],
+        default: "web",
+      },
+    },
+
     parentCaregiverName: {
       type: String,
       default: "",
@@ -88,6 +100,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+
     accountState: {
       userType: {
         type: String,

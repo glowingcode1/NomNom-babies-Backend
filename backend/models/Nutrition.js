@@ -11,7 +11,7 @@ const nutritionSchema = new mongoose.Schema(
     },
     nutrients: [
       {
-        name: { type: String, required: true, trim: true },   // "Vitamin A", "Iron", etc.
+        name: { type: String, required: true, trim: true }, // "Vitamin A", "Iron", etc.
         benefit: { type: String, required: true, trim: true }, // description shown under name
       },
     ],
@@ -25,10 +25,15 @@ const nutritionSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    isWeeklyFocus: {
+      type: Boolean,
+      default: false,
+    },
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-const Nutrition = mongoose.models.Nutrition || mongoose.model("Nutrition", nutritionSchema);
+const Nutrition =
+  mongoose.models.Nutrition || mongoose.model("Nutrition", nutritionSchema);
 module.exports = Nutrition;

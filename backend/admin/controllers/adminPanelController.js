@@ -5,66 +5,328 @@ const {
   parsePaginationParams,
   generateMeta,
 } = require("@utils/responseUtil");
-const { Devices } = require("@models/Devices");
-const Review = require("@models/Review");
+const Recipe = require("@models/Recipe");
+const Country = require("@models/Country");
+const BabyStage = require("@models/BabyStage");
+const NutritionTag = require("@models/Nutrition");
 const SupportRequest = require("@models/SupportRequest");
-const ContactUs = require("@models/ContactUs");
-const Faq = require("@models/Faq");
+const AdminActivity = require("@models/AdminActivity");
 
 // Add or Update Document
 const dashboard = async (req, res) => {
   try {
-    const activeUsersCount = await User.countDocuments({
-      "accountState.status": "active",
-      // "accountState.userType": { $ne: "admin" },
-      // "verificationStatus.email": "verified",
-    });
-    const inactiveUsersCount = await User.countDocuments({
-      "accountState.status": "inactive",
-    });
+    const [
+      totalUsers,
+      activeUsers,
+      inactiveUsers,
 
-    const pendingDocumentsCount = await User.countDocuments({
-      "verificationStatus.documents": "submitted",
-    });
+      totalCountries,
+      activeCountries,
 
-    const bookingsCount = await Booking.countDocuments();
-    const listingsCount = await Listing.countDocuments();
-    const listingDamageRequestsCount = await ListingDamageReport.countDocuments(
-      {
+      totalRecipes,
+      publishedRecipes,
+      pendingRecipes,
+
+      totalAgeGroups,
+      activeAgeGroups,
+
+      totalNutritionTags,
+
+      openSupportTickets,
+
+      totalDownloads,
+    ] = await Promise.all([
+      User.countDocuments({
+        "accountState.UserType": { $ne: "admin" },
+      }),
+
+      User.countDocuments({
+        "accountState.status": "active",
+        "accountState.userType": { $ne: "admin" },
+      }),
+
+      Country.countDocuments(),
+
+      Country.countDocuments({
+        status: "active",
+        isEnabled: true,
+      }),
+
+      Recipe.countDocuments(),
+
+      Recipe.countDocuments({
+        status: "published",
+      }),
+
+      Recipe.countDocuments({
         status: "pending",
-      }
-    );
+      }),
 
-    (androidCount = await Devices.countDocuments({
-      "devices.deviceType": "android",
-    })),
-      (iosCount = await Devices.countDocuments({
-        "devices.deviceType": "ios",
-      })),
-      sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: "data_fetched_successfully",
-        data: {
-          activeUsersCount: activeUsersCount,
-          inactiveUsersCount: inactiveUsersCount,
-          bookingsCount: bookingsCount,
-          listingsCount: listingsCount,
-          pendingDocumentsCount: pendingDocumentsCount,
-          listingDamageRequestsCount: listingDamageRequestsCount,
-          appDownloadsCount: {
-            android: androidCount,
-            ios: iosCount,
-            total: androidCount + iosCount,
-          },
+      BabyStage.countDocuments(),
+      BabyStage.countDocuments({
+        active: true,
+      }),
+
+      NutritionTag.countDocuments(),
+
+      SupportRequest.countDocuments({
+        status: {
+          $in: ["pending", "open"],
         },
-      });
+      }),
+    ]);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: {
+        widgets: {
+          totalUsers,
+          activeUsers,
+          inactiveUsers,
+
+          totalCountries,
+          activeCountries,
+
+          totalRecipes,
+          publishedRecipes,
+          pendingRecipes,
+
+          totalAgeGroups,
+          activeAgeGroups,
+
+          totalNutritionTags,
+
+          openSupportTickets,
+
+          downloadedResources: totalDownloads,
+        },
+      },
+    });
   } catch (error) {
     sendResponse({
       res,
       statusCode: 500,
-      translationKey: "some_thing_went_wrong",
-      error,
+      translationKey: "internal_server_error",
+      error: error.message,
+    });
+  }
+};
+
+const userStatusStats = async (req, res) => {
+  try {
+    const [active, suspended, inactive] = await Promise.all([
+      User.countDocuments({
+        "accountState.status": "active",
+      }),
+
+      User.countDocuments({
+        "accountState.status": "suspended",
+      }),
+
+      User.countDocuments({
+        "accountState.status": "inactive",
+      }),
+    ]);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      data: {
+        active,
+        suspended,
+        inactive,
+      },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      error: error.message,
+    });
+  }
+};
+
+const platformHealth = async (req, res) => {
+  try {
+    const [
+      totalCountries,
+      activeCountries,
+
+      totalAgeGroups,
+      activeAgeGroups,
+
+      totalRecipes,
+      publishedRecipes,
+    ] = await Promise.all([
+      Country.countDocuments(),
+      Country.countDocuments({ isActive: true }),
+
+      BabyStage.countDocuments(),
+      BabyStage.countDocuments({ isActive: true }),
+
+      Recipe.countDocuments(),
+      Recipe.countDocuments({
+        status: "published",
+      }),
+    ]);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      data: {
+        countriesRate:
+          totalCountries > 0
+            ? Math.round((activeCountries / totalCountries) * 100)
+            : 0,
+
+        ageGroupsRate:
+          totalAgeGroups > 0
+            ? Math.round((activeAgeGroups / totalAgeGroups) * 100)
+            : 0,
+
+        recipesRate:
+          totalRecipes > 0
+            ? Math.round((publishedRecipes / totalRecipes) * 100)
+            : 0,
+      },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      error: error.message,
+    });
+  }
+};
+
+const topViewedRecipes = async (req, res) => {
+  try {
+    const recipes = await Recipe.find({
+      status: "published",
+    })
+      .populate("country", "name")
+      .sort({ views: -1 })
+      .limit(10)
+      .select("title mealType views");
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      data: recipes,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      error: error.message,
+    });
+  }
+};
+
+const topCountries = async (req, res) => {
+  try {
+    const countries = await User.aggregate([
+      {
+        $match: {
+          "onboarding.selectedCountries.0": { $exists: true },
+        },
+      },
+
+      {
+        $unwind: "$onboarding.selectedCountries",
+      },
+
+      {
+        $group: {
+          _id: "$onboarding.selectedCountries",
+          users: { $sum: 1 },
+        },
+      },
+
+      {
+        $sort: {
+          users: -1,
+        },
+      },
+
+      {
+        $limit: 10,
+      },
+
+      {
+        $lookup: {
+          from: "countries",
+          localField: "_id",
+          foreignField: "_id",
+          as: "country",
+        },
+      },
+
+      {
+        $unwind: "$country",
+      },
+
+      {
+        $project: {
+          _id: 0,
+          countryId: "$country._id",
+          name: "$country.name",
+          flag: "$country.flag",
+          users: 1,
+        },
+      },
+    ]);
+
+    const totalSelections = countries.reduce(
+      (sum, item) => sum + item.users,
+      0,
+    );
+
+    const result = countries.map((country) => ({
+      ...country,
+      selectionRate:
+        totalSelections > 0
+          ? Number(((country.users / totalSelections) * 100).toFixed(1))
+          : 0,
+    }));
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: result,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const recentActivities = async (req, res) => {
+  try {
+    const activities = await AdminActivity.find()
+      .populate("user", "name email")
+      .sort({ createdAt: -1 })
+      .limit(10);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: activities,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
     });
   }
 };
@@ -482,8 +744,6 @@ const getUserStatsByRegion = async (req, res) => {
   }
 };
 
-
-
 const topRatedUsers = async (req, res) => {
   try {
     const reviews = await Review.find({ reviewType: "user" })
@@ -899,7 +1159,6 @@ const deleteContactRequest = async (req, res) => {
   }
 };
 
-
 //faqs crud
 const getFaqs = async (req, res) => {
   try {
@@ -1048,7 +1307,6 @@ const deleteFaq = async (req, res) => {
   }
 };
 
-
 //update user account state
 const updateUserAccountState = async (req, res) => {
   try {
@@ -1116,4 +1374,9 @@ module.exports = {
   updateFaq,
   deleteFaq,
   updateUserAccountState,
+  userStatusStats,
+  platformHealth,
+  topCountries,
+  topViewedRecipes,
+  recentActivities,
 };

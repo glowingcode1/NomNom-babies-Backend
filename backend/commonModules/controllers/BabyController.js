@@ -12,9 +12,14 @@ const {
 // Create a new baby profile
 const createBaby = async (req, res) => {
   try {
-    if (!validateParams(req, res, { rawData: ["name"] })) return;
+    if (
+      !validateParams(req, res, {
+        rawData: ["name", "stageId", "selectedCountries"],
+      })
+    )
+      return;
 
-    const { name, stageId, countryIds = [] } = req.body;
+    const { name, stageId, selectedCountries = [] } = req.body;
 
     // Validate stage if provided
     if (stageId) {
@@ -28,8 +33,16 @@ const createBaby = async (req, res) => {
       }
     }
 
-    // Validate countries if provided
-    if (countryIds.length > 2) {
+    // Get user and onboarding countries
+    const user = await User.findById(req.user._id);
+
+    const finalCountries =
+      selectedCountries.length > 0
+        ? selectedCountries
+        : user.onboarding?.selectedCountries || [];
+
+    // Validate countries
+    if (finalCountries.length > 2) {
       return sendResponse({
         res,
         statusCode: 400,
@@ -37,12 +50,13 @@ const createBaby = async (req, res) => {
       });
     }
 
-    if (countryIds.length > 0) {
+    if (finalCountries.length > 0) {
       const countries = await Country.find({
-        _id: { $in: countryIds },
+        _id: { $in: finalCountries },
         isEnabled: true,
       });
-      if (countries.length !== countryIds.length) {
+
+      if (countries.length !== finalCountries.length) {
         return sendResponse({
           res,
           statusCode: 404,
@@ -51,15 +65,16 @@ const createBaby = async (req, res) => {
       }
     }
 
-    const baby = await Baby.create({
+    const baby = new Baby({
       user: req.user._id,
       name: name.trim(),
       babyStage: stageId || null,
-      selectedCountries: countryIds,
+      selectedCountries: finalCountries,
     });
 
+    await baby.validate();
+    await baby.save();
     // Set as active baby if user has no active baby yet
-    const user = await User.findById(req.user._id);
     if (!user.activeBaby) {
       user.activeBaby = baby._id;
       await user.save();

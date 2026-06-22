@@ -20,6 +20,10 @@ const recipeSchema = new mongoose.Schema(
       enum: ["easy", "medium", "hard"],
       default: "easy",
     },
+    views: {
+      type: Number,
+      default: 0,
+    },
     prepTime: {
       type: Number, // in minutes
       required: true,

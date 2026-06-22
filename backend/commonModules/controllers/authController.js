@@ -169,10 +169,10 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, deviceId, deviceType } = req.body;
 
     const validationOptions = {
-      rawData: ["email", "password"],
+      rawData: ["email", "password", "deviceId", "deviceType"],
     };
     if (!validateParams(req, res, validationOptions)) {
       return;
@@ -207,6 +207,8 @@ const login = async (req, res) => {
         translationKey: "your_account_2",
       });
     }
+
+    await createOrSkipDevice(user._id, deviceId, deviceType);
 
     const token = user.generateAuthToken();
 

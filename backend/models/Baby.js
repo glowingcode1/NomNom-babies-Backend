@@ -16,9 +16,11 @@ const babySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "BabyStage",
       default: null,
+      required: true,
     },
     selectedCountries: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Country" }],
+      required: true,
       default: [],
       validate: {
         validator: (val) => val.length <= 2,
@@ -28,9 +30,10 @@ const babySchema = new mongoose.Schema(
     isActive: {
       type: Boolean,
       default: true,
+      required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const Baby = mongoose.models.Baby || mongoose.model("Baby", babySchema);

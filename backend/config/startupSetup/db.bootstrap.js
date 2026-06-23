@@ -43,13 +43,41 @@ async function runDBBootstrap() {
 
     // Admin Settings
     if (!(await AdminSettings.findOne())) {
-      await AdminSettings.create({
-        terms_and_conditions: "Your terms and conditions text here.",
-        customer_terms_and_conditions:
-          "Your customer terms and conditions text here.",
-        about_us: "Information about us here.",
-        privacy_policy: "Your privacy policy text here.",
-      });
+      await AdminSettings.updateOne(
+        { key: "aboutUs" },
+        {
+          $setOnInsert: {
+            key: "aboutUs",
+            title: "About Us",
+            content: "<p>Information about us here.</p>",
+          },
+        },
+        { upsert: true },
+      );
+
+      await AdminSettings.updateOne(
+        { key: "privacyPolicy" },
+        {
+          $setOnInsert: {
+            key: "privacyPolicy",
+            title: "Privacy Policy",
+            content: "<p>Your privacy policy text here.</p>",
+          },
+        },
+        { upsert: true },
+      );
+
+      await AdminSettings.updateOne(
+        { key: "termsConditions" },
+        {
+          $setOnInsert: {
+            key: "termsConditions",
+            title: "Terms & Conditions",
+            content: "<p>Your terms and conditions text here.</p>",
+          },
+        },
+        { upsert: true },
+      );
       console.log("✅ Admin settings created");
     }
 

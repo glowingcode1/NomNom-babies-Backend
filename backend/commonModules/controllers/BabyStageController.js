@@ -12,16 +12,27 @@ const {
 
 // Get all active baby stages (for the selection screen)
 const getBabyStages = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+
   try {
-    const stages = await BabyStage.find({ active: true })
-      .sort({ createdAt: 1 })
-      .select("title features");
+    const [stages, totalStages] = await Promise.all([
+      BabyStage.find({ active: true })
+        .sort({ createdAt: 1 })
+        .select("title features")
+        .skip((page - 1) * limit)
+        .limit(limit),
+
+      BabyStage.countDocuments({ active: true }),
+    ]);
+
+    const meta = generateMeta(page, limit, totalStages);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: stages,
+      meta,
     });
   } catch (error) {
     return sendResponse({

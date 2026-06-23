@@ -74,11 +74,9 @@ const createBaby = async (req, res) => {
 
     await baby.validate();
     await baby.save();
-    // Set as active baby if user has no active baby yet
-    if (!user.activeBaby) {
-      user.activeBaby = baby._id;
-      await user.save();
-    }
+
+    user.activeBaby = baby._id;
+    await user.save();
 
     await baby.populate([
       { path: "babyStage", select: "title features" },

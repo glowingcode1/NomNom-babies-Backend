@@ -438,9 +438,60 @@ const deleteRecipe = async (req, res) => {
   }
 };
 
+const getBabyRecipes = async (req, res) => {
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["babyId"],
+        objectIdFields: ["babyId"],
+      })
+    )
+      return;
+
+    const baby = await Baby.findOne({
+      _id: req.params.babyId,
+      user: req.user._id,
+      isActive: true,
+    });
+
+    if (!baby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const recipes = await Recipe.find({
+      status: "published",
+      isActive: true,
+      babyStage: baby.babyStage,
+      country: { $in: baby.selectedCountries },
+    })
+      .populate("country", "name")
+      .populate("babyStage", "title")
+      .sort({ createdAt: -1 });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: recipes,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getRecipes,
   getRecipeById,
+  getBabyRecipes,
   adminGetRecipes,
   getUserRecipes,
   getUserBabyRecipes,

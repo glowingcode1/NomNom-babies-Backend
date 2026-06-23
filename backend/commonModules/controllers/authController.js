@@ -63,20 +63,11 @@ const register = async (req, res) => {
       parentCaregiverName,
       email,
       password,
-      acceptTerms,
       timezone,
       language = "en",
       deviceId,
       deviceType,
     } = req.body;
-
-    if (!isAdminSignup && !acceptTerms) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "please_accept_terms",
-      });
-    }
 
     if (
       !isAdminSignup &&
@@ -118,7 +109,6 @@ const register = async (req, res) => {
       phoneNumber: isAdminSignup ? undefined : phoneNumber,
       profileIcon,
       parentCaregiverName: isAdminSignup ? undefined : parentCaregiverName,
-      acceptTerms: isAdminSignup ? true : acceptTerms,
       timezone: timezone || "Asia/Karachi",
       language,
       verificationStatus: {
@@ -127,7 +117,7 @@ const register = async (req, res) => {
       },
       accountState: {
         userType: assignedRole,
-        status: isAdminSignup ? "active" : "inactive",
+        status: isAdminSignup ? "active" : "active",
       },
     });
 
@@ -169,10 +159,18 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password, deviceId, deviceType } = req.body;
+    const { email, password, deviceId, deviceType, language, timezone } =
+      req.body;
 
     const validationOptions = {
-      rawData: ["email", "password", "deviceId", "deviceType"],
+      rawData: [
+        "email",
+        "password",
+        "deviceId",
+        "deviceType",
+        "language",
+        "timezone",
+      ],
     };
     if (!validateParams(req, res, validationOptions)) {
       return;
@@ -208,7 +206,36 @@ const login = async (req, res) => {
       });
     }
 
+    // Check the user's verification status
+    const verificationStatus = user.verificationStatus["email"];
+    if (verificationStatus === "pending") {
+      const otp = user.generateOtp("email", user.timezone || "UTC");
+      await user.save();
+      return sendResponse({
+        res,
+        statusCode: 401,
+        translationKey: "email_not_verified",
+        data: { otp }, // Optionally include OTP in the response for testing purposes
+      });
+    }
+
     await createOrSkipDevice(user._id, deviceId, deviceType);
+
+    let shouldSave = false;
+
+    if (language && user.language !== language) {
+      user.language === language;
+      shouldSave = true;
+    }
+
+    if (timezone && user.timezone !== timezone) {
+      user.timezone === timezone;
+      shouldSave = true;
+    }
+
+    if (shouldSave) {
+      await user.save();
+    }
 
     const token = user.generateAuthToken();
 
@@ -654,7 +681,7 @@ const deleteAccount = async (req, res) => {
         $set: {
           email: randomEmail, // replace with random email
           previousEmail: email, // store the original email
-          "accountState.status": "hardDeleted",
+          "accountState.status": "sotDeleted",
           "accountState.finalDeletionDate": new Date(), // set to now or your logic
         },
       },

@@ -13,6 +13,7 @@ const {
   deleteRecipe,
   getUserRecipes,
   getUserBabyRecipes,
+  getBabyRecipes,
 } = require("../controllers/RecipeController");
 
 const router = express.Router();
@@ -26,6 +27,7 @@ router.get("/", auth, getRecipes);
 router.get("/admin/users/:userId", auth, getUserRecipes);
 router.get("/admin/users/:userId/baby/:babyId", auth, getUserBabyRecipes);
 router.get("/:id", auth, getRecipeById);
+router.get("/baby/:babyId", auth, getBabyRecipes);
 
 // CONTENT ADMIN + SUPER ADMIN
 router.get(

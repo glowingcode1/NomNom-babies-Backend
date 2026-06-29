@@ -1,24 +1,26 @@
-import FoodTracker from "@models/FoodTracker";
-import {
+const FoodTracker = require("@models/FoodTracker");
+const {
   generateMeta,
   parsePaginationParams,
   sendResponse,
   validateParams,
-} from "@utils/responseUtil";
+} = require("@utils/responseUtil");
 
-const createFoodTracker = async (res, req) => {
+const createFoodTracker = async (req, res) => {
   try {
-    const validationOptions = {
-      rawData: ["baby", "ingredientName", "date", "reaction"],
-    };
 
-    if (!validateParams(req, res, validationOptions)) {
+    if (
+      !validateParams(req, res, {
+        rawData: ["baby", "ingredientName", "date", "reaction"],
+      })
+    ) {
       return;
     }
 
-    const { baby, ingredientName, date, reaction } = req.body;
+    const { image, baby, ingredientName, date, reaction } = req.body;
 
     const foodTracker = await FoodTracker.create({
+      image,
       baby,
       user: req.user._id,
       ingredientName,
@@ -33,6 +35,7 @@ const createFoodTracker = async (res, req) => {
       data: foodTracker,
     });
   } catch (error) {
+
     return sendResponse({
       res,
       statusCode: 500,
@@ -42,7 +45,7 @@ const createFoodTracker = async (res, req) => {
   }
 };
 
-const getFoodTracker = async (res, req) => {
+const getFoodTracker = async (req, res) => {
   try {
     const { babyId } = req.params;
 
@@ -67,7 +70,7 @@ const getFoodTracker = async (res, req) => {
   }
 };
 
-const getAllFoodTrackers = async (res, req) => {
+const getAllFoodTrackers = async (req, res) => {
   try {
     const { page, limit } = parsePaginationParams(req);
 
@@ -95,7 +98,7 @@ const getAllFoodTrackers = async (res, req) => {
     return sendResponse({
       res,
       statusCode: 500,
-      trasnlationKey: error.message,
+      translationKey: error.message,
       error,
     });
   }

@@ -23,7 +23,7 @@ const getNutritionByRecipe = async (req, res) => {
     const nutrition = await Nutrition.findOne({
       recipe: req.params.recipeId,
       isActive: true,
-    }).populate("recipe", "title emoji");
+    }).populate("recipe", "title");
 
     if (!nutrition) {
       return sendResponse({
@@ -65,7 +65,7 @@ const adminGetNutritions = async (req, res) => {
       .populate({
         path: "recipe",
         match: search ? { title: { $regex: search, $options: "i" } } : {},
-        select: "title emoji",
+        select: "title",
       })
       .sort({ createdAt: -1 });
 
@@ -104,7 +104,7 @@ const adminGetNutritionById = async (req, res) => {
 
     const nutrition = await Nutrition.findById(req.params.id).populate(
       "recipe",
-      "title emoji",
+      "title",
     );
 
     if (!nutrition) {

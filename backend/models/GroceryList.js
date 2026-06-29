@@ -1,37 +1,44 @@
 const mongoose = require("mongoose");
 
+const groceryIngredientSchema = new mongoose.Schema({
+  name: String,
+
+  quantity: String,
+
+  category: String,
+
+  checked: {
+    type: Boolean,
+
+    default: false,
+  },
+});
+
+const groceryRecipeSchema = new mongoose.Schema(
+  {
+    recipe: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Recipe",
+      required: true,
+    },
+
+    ingredients: [groceryIngredientSchema],
+  },
+  {
+    _id: true,
+  },
+);
+
 const groceryListSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
+      unique: true,
     },
 
-    items: [
-      {
-        recipe: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Recipe",
-        },
-        name: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        quantity: {
-          type: String,
-          default: "",
-          trim: true,
-        },
-
-        checked: {
-          type: Boolean,
-          default: false,
-        },
-      },
-    ],
+    recipes: [groceryRecipeSchema],
   },
   {
     timestamps: true,

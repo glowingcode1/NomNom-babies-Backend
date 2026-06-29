@@ -2,6 +2,7 @@ const FeedingSchedule = require("@models/FeedingSchedule");
 const FeedingLog = require("@models/FeedingLog");
 const { sendResponse, validateParams } = require("@utils/responseUtil");
 const Recipe = require("@models/Recipe");
+const mongoose = require("mongoose");
 
 // Get feeding schedule for active baby on a given date
 const getFeedingSchedule = async (req, res) => {
@@ -18,7 +19,7 @@ const getFeedingSchedule = async (req, res) => {
     const schedule = await FeedingSchedule.findOne({
       baby: babyId,
       user: req.user._id,
-    }).populate("slots.recipe", "title emoji image prepTime");
+    }).populate("weekSchedules.slots.recipe", "title image prepTime");
 
     if (!schedule) {
       return sendResponse({
@@ -36,21 +37,32 @@ const getFeedingSchedule = async (req, res) => {
 
     const completedSlotIds = new Set(logs.map((l) => String(l.slotId)));
 
-    const slots = schedule.slots.map((slot) => ({
+    const selectedDay = schedule.weekSchedules.find((day) => day.date === date);
+
+    if (!selectedDay) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "data_fetched_successfully",
+        data: {
+          scheduleId: schedule._id,
+          slots: [],
+          progress: {
+            completed: 0,
+            total: 0,
+          },
+        },
+      });
+    }
+
+    const slots = selectedDay.slots.map((slot) => ({
       _id: slot._id,
-
       type: slot.type,
-
       time: slot.time,
-
       title: slot.title,
-
       description: slot.description,
-
       amount: slot.amount,
-
       recipe: slot.recipe,
-
       completed: completedSlotIds.has(String(slot._id)),
     }));
 
@@ -84,17 +96,31 @@ const getFeedingSchedule = async (req, res) => {
 const getScheduleSlotDetail = async (req, res) => {
   try {
     const { slotId } = req.params;
-    const schedule = await FeedingSchedule.findOne({
-      "slots._id": slotId,
-      user: req.user._id,
-    }).populate({
-      path: "slots.recipe",
-      populate: {
-        path: "country babyStage",
+    const schedule = await FeedingSchedule.aggregate([
+      {
+        $match: {
+          user: req.user._id,
+        },
       },
-    });
+      {
+        $unwind: "$weekSchedules",
+      },
+      {
+        $unwind: "$weekSchedules.slots",
+      },
+      {
+        $match: {
+          "weekSchedules.slots._id": new mongoose.Types.ObjectId(slotId),
+        },
+      },
+      {
+        $replaceRoot: {
+          newRoot: "$weekSchedules.slots",
+        },
+      },
+    ]);
 
-    if (!schedule) {
+    if (!schedule.length) {
       return sendResponse({
         res,
         statusCode: 404,
@@ -102,7 +128,7 @@ const getScheduleSlotDetail = async (req, res) => {
       });
     }
 
-    const slot = schedule.slots.id(slotId);
+    const slot = schedule?.[0]?.slot;
 
     if (!slot) {
       return sendResponse({
@@ -132,7 +158,7 @@ const removeScheduleSlot = async (req, res) => {
   try {
     const { slotId } = req.params;
     const schedule = await FeedingSchedule.findOne({
-      "slots._id": slotId,
+      "weekSchedules.slots._id": slotId,
       user: req.user._id,
     });
 
@@ -144,7 +170,19 @@ const removeScheduleSlot = async (req, res) => {
       });
     }
 
-    schedule.slots.pull(slotId);
+    await FeedingSchedule.updateOne(
+      {
+        user: req.user._id,
+        "weekSchedules.slots._id": slotId,
+      },
+      {
+        $pull: {
+          "weekSchedules.$[].slots": {
+            _id: slotId,
+          },
+        },
+      },
+    );
 
     await schedule.save();
 
@@ -166,9 +204,10 @@ const removeScheduleSlot = async (req, res) => {
 // Create feeding schedule for a baby
 const createFeedingSchedule = async (req, res) => {
   try {
-    if (!validateParams(req, res, { rawData: ["babyId", "slots"] })) return;
+    if (!validateParams(req, res, { rawData: ["babyId", "weekSchedules"] }))
+      return;
 
-    const { babyId, slots } = req.body;
+    const { babyId, weekSchedules } = req.body;
 
     // Only one schedule per baby
     const existing = await FeedingSchedule.findOne({
@@ -187,7 +226,7 @@ const createFeedingSchedule = async (req, res) => {
     const schedule = await FeedingSchedule.create({
       baby: babyId,
       user: req.user._id,
-      slots,
+      weekSchedules,
     });
 
     return sendResponse({
@@ -214,7 +253,7 @@ const updateFeedingSchedule = async (req, res) => {
     )
       return;
 
-    const { slots } = req.body;
+    const { weekSchedules } = req.body;
 
     const schedule = await FeedingSchedule.findOne({
       _id: req.params.id,
@@ -229,7 +268,7 @@ const updateFeedingSchedule = async (req, res) => {
       });
     }
 
-    if (slots !== undefined) schedule.slots = slots;
+    if (weekSchedules !== undefined) schedule.weekSchedules = weekSchedules;
     await schedule.save();
 
     return sendResponse({
@@ -298,7 +337,7 @@ const getUserFeedingSchedules = async (req, res) => {
       user: req.params.userId,
     })
       .populate("baby", "name")
-      .populate("slots.recipe", "title emoji image prepTime")
+      .populate("weekSchedules.slots.recipe", "title image prepTime")
       .sort({ createdAt: -1 });
 
     return sendResponse({
@@ -332,7 +371,7 @@ const getUserBabyFeedingSchedule = async (req, res) => {
       baby: req.params.babyId,
     })
       .populate("baby", "name")
-      .populate("slots.recipe", "title emoji image prepTime");
+      .populate("weekSchedules.slots.recipe", "title image prepTime");
 
     if (!schedule) {
       return sendResponse({

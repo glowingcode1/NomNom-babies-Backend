@@ -10,7 +10,7 @@ const { userCache } = require("@config/nodeCache");
 
 // Create a new language
 const createLanguage = async (req, res) => {
-  const { title, transliteration, flag, code } = req.body;
+  const { title, image, transliteration, flag, code } = req.body;
 
   try {
     //validate params
@@ -22,7 +22,13 @@ const createLanguage = async (req, res) => {
       return;
     }
 
-    const language = new Language({ title, transliteration, flag, code });
+    const language = new Language({
+      title,
+      image,
+      transliteration,
+      flag,
+      code,
+    });
     await language.save();
 
     return sendResponse({
@@ -73,7 +79,7 @@ const getLanguages = async (req, res) => {
 // Update an existing language
 const updateLanguage = async (req, res) => {
   const { id } = req.params;
-  const { title, transliteration, flag, code, active } = req.body;
+  const { title, image, transliteration, flag, code, active } = req.body;
   try {
     const validationOptions = {
       pathParams: ["id"],
@@ -93,6 +99,7 @@ const updateLanguage = async (req, res) => {
     }
 
     language.title = title || language.title;
+    language.image = image || language.image;
     language.transliteration = transliteration || language.transliteration;
     language.flag = flag || language.flag;
     language.code = code || language.code;

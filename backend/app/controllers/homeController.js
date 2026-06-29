@@ -1,6 +1,5 @@
 const Baby = require("@models/Baby");
 const Recipe = require("@models/Recipe");
-const Journey = require("@models/Journey");
 const Nutrition = require("@models/Nutrition");
 const FeedingLog = require("@models/FeedingLog");
 const FeedingSchedule = require("@models/FeedingSchedule");
@@ -8,6 +7,9 @@ const FoodIntroduction = require("@models/FoodIntroduction");
 
 const { User } = require("@models/UserModel");
 const { sendResponse } = require("@utils/responseUtil");
+const FoodTracker = require("@models/FoodTracker");
+
+const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const getHome = async (req, res) => {
   try {
@@ -42,28 +44,27 @@ const getHome = async (req, res) => {
     const [
       feedingSchedule,
       todayLogs,
+      allLogs,
       culturalRecipes,
       weeklyFocus,
-      journey,
       foodTracker,
     ] = await Promise.all([
       FeedingSchedule.findOne({
         baby: baby._id,
       }).populate({
-        path: "slots.recipe",
-        populate: [
-          {
-            path: "country",
-          },
-          {
-            path: "babyStage",
-          },
-        ],
+        path: "weekSchedules.slots.recipe",
+        populate: [{ path: "country" }, { path: "babyStage" }],
       }),
 
       FeedingLog.find({
         baby: baby._id,
+        user: userId,
         date: today,
+      }),
+
+      FeedingLog.find({
+        baby: baby._id,
+        user: userId,
       }),
 
       Recipe.find({
@@ -82,27 +83,45 @@ const getHome = async (req, res) => {
         isActive: true,
       }).populate("recipe"),
 
-      Journey.findOne({
-        babyStage: baby.babyStage?._id,
-        isActive: true,
-      }),
-
-      FoodIntroduction.find({
+      FoodTracker.find({
         baby: baby._id,
+        user: userId,
       })
-        .populate("recipe")
-        .sort({
-          introducedAt: -1,
-        })
+        .sort({ date: -1 })
         .limit(5),
     ]);
+
+    console.log(JSON.stringify(feedingSchedule?.weekSchedules, null, 2));
+    console.log("TODAY:", today);
+    console.log(
+      "AVAILABLE DATES:",
+      feedingSchedule?.weekSchedules?.map((d) => d.date),
+    );
 
     const completedSlotIds = new Set(
       todayLogs.map((log) => String(log.slotId)),
     );
 
+    let todaySchedule = feedingSchedule?.weekSchedules?.find(
+      (day) => day.date === today,
+    );
+
+    // If today doesn't exist in schedule,
+    // take nearest upcoming schedule day
+    if (!todaySchedule) {
+      todaySchedule = feedingSchedule?.weekSchedules
+        ?.filter((day) => day.date >= today)
+        ?.sort((a, b) => a.date.localeCompare(b.date))[0];
+    }
+
+    // If all schedule dates are in the past,
+    // take first available day
+    if (!todaySchedule) {
+      todaySchedule = feedingSchedule?.weekSchedules?.[0];
+    }
+
     const recommendedMeals =
-      feedingSchedule?.slots?.map((slot) => ({
+      todaySchedule?.slots?.map((slot) => ({
         id: slot._id,
         type: slot.type,
         title: slot.title,
@@ -111,65 +130,65 @@ const getHome = async (req, res) => {
         completed: completedSlotIds.has(String(slot._id)),
       })) || [];
 
-    const completionRate =
-      recommendedMeals.length === 0
-        ? 0
-        : Math.round(
-            (recommendedMeals.filter((meal) => meal.completed).length /
-              recommendedMeals.length) *
-              100,
-          );
+    const incompleteSlots =
+      todaySchedule?.slots?.filter(
+        (slot) => !completedSlotIds.has(String(slot._id)),
+      ) || [];
 
-    const currentTime = new Date();
-
-    const nextMeal = feedingSchedule?.slots?.find(() => true) || null;
+    const nextMeal =
+      incompleteSlots.sort((a, b) => a.time.localeCompare(b.time))[0] || null;
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: {
-        babyCard: {
+        babyInfo: {
           babyId: baby._id,
           babyName: baby.name,
           stage: baby.babyStage?.title || "",
           countries: baby.selectedCountries.map((country) => country.name),
         },
 
-        recommendedToday: {
-          completionRate,
-          meals: recommendedMeals,
-        },
+        recommendedToday: recommendedMeals,
 
-        weeklyJourney: journey
-          ? {
-              currentDay: journey.dayNumber,
-              totalDays: 7,
-              title: journey.title,
-              description: journey.description,
-            }
-          : null,
+        weeklyJourney:
+          feedingSchedule?.weekSchedules?.map((day) => {
+            const totalSlots = day.slots.length;
+
+            const completedSlots = day.slots.filter((slot) =>
+              allLogs.some(
+                (log) =>
+                  String(log.slotId) === String(slot._id) &&
+                  log.date === day.date,
+              ),
+            ).length;
+
+            return {
+              dayNumber: day.dayNumber,
+              dayName: dayNames[day.dayNumber - 1],
+              date: day.date,
+              totalSlots,
+              completedSlots,
+              completed: totalSlots > 0 && completedSlots === totalSlots,
+            };
+          }) || [],
 
         customCulturalPicks: culturalRecipes.map((recipe) => ({
           id: recipe._id,
           title: recipe.title,
-          emoji: recipe.emoji,
           image: recipe.image,
           mealType: recipe.mealType,
-          difficulty: recipe.difficulty,
           prepTime: recipe.prepTime,
           country: recipe.country?.name || "",
         })),
 
         foodTracker: foodTracker.map((item) => ({
-          recipeId: item.recipe?._id,
-          title: item.recipe?.title,
-          image: item.recipe?.image,
-          introducedAt: item.introducedAt,
-          introducedDaysAgo: Math.floor(
-            (Date.now() - new Date(item.introducedAt).getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
+          id: item._id,
+          ingredientName: item.ingredientName,
+          image: item.image,
+          date: item.date,
+          reaction: item.reaction,
         })),
 
         weeklyFocus: weeklyFocus

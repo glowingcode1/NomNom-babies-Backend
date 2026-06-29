@@ -14,7 +14,7 @@ if (!fs.existsSync(folderPath)) {
 if (!fs.existsSync(filePath)) {
   fs.writeFileSync(
     filePath,
-    JSON.stringify({ sample: "SERVICE_ACCOUNT_PLACEHOLDER" }, null, 2)
+    JSON.stringify({ sample: "SERVICE_ACCOUNT_PLACEHOLDER" }, null, 2),
   );
 }
 
@@ -24,7 +24,9 @@ const serviceAccount = require("../secretAssets/serviceAccountKey.json");
 const SAMPLE_MARKER = "SERVICE_ACCOUNT_PLACEHOLDER";
 
 if (serviceAccount.sample === SAMPLE_MARKER) {
-  console.warn("Firebase Admin skipped — service account is sample at ../secretAssets/serviceAccountKey.json.");
+  console.warn(
+    "Firebase Admin skipped — service account is sample at ../secretAssets/serviceAccountKey.json.",
+  );
 } else {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),

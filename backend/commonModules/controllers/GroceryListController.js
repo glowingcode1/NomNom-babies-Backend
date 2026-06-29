@@ -1,22 +1,13 @@
 const GroceryList = require("@models/GroceryList");
 const Recipe = require("@models/Recipe");
+const Baby = require("@models/Baby");
 
 const { sendResponse, validateParams } = require("@utils/responseUtil");
 
 // Add recipe ingredients to grocery list
 const addRecipeToGroceryList = async (req, res) => {
   try {
-    if (
-      !validateParams(req, res, {
-        rawData: ["recipeId"],
-        objectIdFields: ["recipeId"],
-      })
-    ) {
-      return;
-    }
-
-    const { recipeId } = req.body;
-    const userId = req.user._id;
+    const { recipeId, ingredients } = req.body;
 
     const recipe = await Recipe.findById(recipeId);
 
@@ -29,24 +20,38 @@ const addRecipeToGroceryList = async (req, res) => {
     }
 
     let groceryList = await GroceryList.findOne({
-      user: userId,
+      user: req.user._id,
     });
 
     if (!groceryList) {
       groceryList = await GroceryList.create({
-        user: userId,
-        items: [],
+        user: req.user._id,
+        recipes: [],
       });
     }
 
-    const newItems = recipe.ingredients.map((ingredient) => ({
-      recipe: recipe._id,
-      name: ingredient.name,
-      quantity: ingredient.quantity,
-      checked: false,
-    }));
+    const alreadyExists = groceryList.recipes.find(
+      (r) => String(r.recipe) === String(recipeId),
+    );
 
-    groceryList.items.push(...newItems);
+    if (alreadyExists) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "recipe_already_added",
+      });
+    }
+
+    groceryList.recipes.push({
+      recipe: recipeId,
+
+      ingredients: ingredients.map((ingredient) => ({
+        name: ingredient.name,
+        quantity: ingredient.quantity,
+        category: ingredient.category,
+        checked: false,
+      })),
+    });
 
     await groceryList.save();
 
@@ -68,18 +73,130 @@ const addRecipeToGroceryList = async (req, res) => {
 
 // Get grocery list
 const getGroceryList = async (req, res) => {
+  const groceryList = await GroceryList.findOne({
+    user: req.user._id,
+  }).populate("recipes.recipe", "title image emoji");
+
+  if (!groceryList) {
+    return sendResponse({
+      res,
+
+      statusCode: 200,
+
+      translationKey: "data_fetched_successfully",
+
+      data: {
+        recipesIncluded: [],
+        groceryChecklist: [],
+        ingredientCategories: [],
+      },
+    });
+  }
+
+  const recipesIncluded = groceryList.recipes.map((r) => ({
+    recipeId: r.recipe._id,
+
+    title: r.recipe.title,
+
+    image: r.recipe.image,
+
+    emoji: r.recipe.emoji,
+  }));
+
+  const groceryChecklist = [];
+
+  const categoriesMap = {};
+
+  groceryList.recipes.forEach((recipe) => {
+    recipe.ingredients.forEach((ingredient) => {
+      groceryChecklist.push({
+        _id: ingredient._id,
+
+        name: ingredient.name,
+
+        quantity: ingredient.quantity,
+
+        checked: ingredient.checked,
+      });
+
+      if (ingredient.category) {
+        if (!categoriesMap[ingredient.category]) {
+          categoriesMap[ingredient.category] = [];
+        }
+
+        categoriesMap[ingredient.category].push(ingredient.name);
+      }
+    });
+  });
+
+  const ingredientCategories = Object.keys(categoriesMap)
+
+    .map((category) => ({
+      category,
+
+      items: categoriesMap[category],
+    }));
+
+  return sendResponse({
+    res,
+
+    statusCode: 200,
+
+    translationKey: "data_fetched_successfully",
+
+    data: {
+      recipesIncluded,
+
+      groceryChecklist,
+
+      ingredientCategories,
+    },
+  });
+};
+
+const updateIngredientStatus = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const { ingredientId } = req.params;
+    const { checked } = req.body;
 
     const groceryList = await GroceryList.findOne({
-      user: userId,
+      user: req.user._id,
     });
+
+    if (!groceryList) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "grocery_list_not_found",
+      });
+    }
+
+    let targetIngredient = null;
+
+    groceryList.recipes.forEach((recipe) => {
+      const ingredient = recipe.ingredients.id(ingredientId);
+
+      if (ingredient) {
+        targetIngredient = ingredient;
+      }
+    });
+
+    if (!targetIngredient) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "ingredient_not_found",
+      });
+    }
+
+    targetIngredient.checked = checked;
+
+    await groceryList.save();
 
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "data_fetched_successfully",
-      data: groceryList || { items: [] },
+      translationKey: "ingredient_updated_success",
     });
   } catch (error) {
     return sendResponse({
@@ -129,6 +246,43 @@ const updateGroceryItem = async (req, res) => {
       statusCode: 200,
       translationKey: "grocery_item_updated_success",
       data: item,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const removeRecipeFromGroceryList = async (req, res) => {
+  try {
+    const { recipeId } = req.params;
+
+    const groceryList = await GroceryList.findOne({
+      user: req.user._id,
+    });
+
+    if (!groceryList) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "grocery_list_not_found",
+      });
+    }
+
+    groceryList.recipes = groceryList.recipes.filter(
+      (recipe) => String(recipe.recipe) !== String(recipeId),
+    );
+
+    await groceryList.save();
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "recipe_removed_success",
     });
   } catch (error) {
     return sendResponse({
@@ -190,23 +344,14 @@ const removeGroceryItem = async (req, res) => {
 // Clear list
 const clearGroceryList = async (req, res) => {
   try {
-    const userId = req.user._id;
-
-    const groceryList = await GroceryList.findOne({
-      user: userId,
-    });
-
-    if (!groceryList) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "grocery_list_not_found",
-      });
-    }
-
-    groceryList.items = [];
-
-    await groceryList.save();
+    await GroceryList.findOneAndUpdate(
+      {
+        user: req.user._id,
+      },
+      {
+        recipes: [],
+      },
+    );
 
     return sendResponse({
       res,
@@ -226,7 +371,9 @@ const clearGroceryList = async (req, res) => {
 module.exports = {
   addRecipeToGroceryList,
   getGroceryList,
+  updateIngredientStatus,
   updateGroceryItem,
+  removeRecipeFromGroceryList,
   removeGroceryItem,
   clearGroceryList,
 };

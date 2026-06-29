@@ -19,7 +19,7 @@ const createBaby = async (req, res) => {
     )
       return;
 
-    const { name, stageId, selectedCountries = [] } = req.body;
+    const { profileIcon, name, stageId, selectedCountries = [] } = req.body;
 
     // Validate stage if provided
     if (stageId) {
@@ -67,6 +67,7 @@ const createBaby = async (req, res) => {
 
     const baby = new Baby({
       user: req.user._id,
+      profileIcon,
       name: name.trim(),
       babyStage: stageId || null,
       selectedCountries: finalCountries,
@@ -209,7 +210,7 @@ const updateBaby = async (req, res) => {
     )
       return;
 
-    const { name, stageId, countryIds } = req.body;
+    const { profileIcon, name, stageId, countryIds } = req.body;
 
     const baby = await Baby.findOne({
       _id: req.params.id,
@@ -222,6 +223,10 @@ const updateBaby = async (req, res) => {
         statusCode: 404,
         translationKey: "baby_not_found",
       });
+    }
+
+    if (profileIcon !== undefined) {
+      baby.profileIcon = profileIcon;
     }
 
     if (name) baby.name = name.trim();
@@ -360,11 +365,30 @@ const switchActiveBaby = async (req, res) => {
 
     await User.findByIdAndUpdate(req.user._id, { activeBaby: baby._id });
 
+    await baby.populate([
+      {
+        path: "babyStage",
+        select: "title",
+      },
+      {
+        path: "selectedCountries",
+        select: "name",
+      },
+    ]);
+
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "active_baby_switched_success",
-      data: { activeBaby: baby._id },
+      data: {
+        activeBaby: {
+          _id: baby._id,
+          name: baby.name,
+          profileIcon: baby.profileIcon,
+          stage: baby.babyStage?.title,
+          countries: baby.selectedCountries.map((c) => c.name),
+        },
+      },
     });
   } catch (error) {
     return sendResponse({

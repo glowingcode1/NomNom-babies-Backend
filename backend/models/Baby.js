@@ -7,6 +7,10 @@ const babySchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    profileIcon: {
+      type: String,
+      default: "",
+    },
     name: {
       type: String,
       required: true,

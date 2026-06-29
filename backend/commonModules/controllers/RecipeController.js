@@ -27,7 +27,7 @@ const getRecipes = async (req, res) => {
         .populate("country", "name")
         .populate("babyStage", "title")
         .select(
-          "title emoji image prepTime mealType nutritionTags country babyStage difficulty",
+          "title image prepTime mealType nutritionTags country babyStage",
         )
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
@@ -174,7 +174,7 @@ const getUserRecipes = async (req, res) => {
       .populate("country", "name")
       .populate("babyStage", "title")
       .select(
-        "title emoji image prepTime mealType nutritionTags difficulty country babyStage",
+        "title image prepTime mealType nutritionTags country babyStage",
       )
       .sort({ createdAt: -1 });
 
@@ -257,7 +257,7 @@ const createRecipe = async (req, res) => {
 
     const {
       title,
-      emoji,
+      image,
       prepTime,
       country,
       babyStage,
@@ -271,7 +271,7 @@ const createRecipe = async (req, res) => {
 
     const recipe = await Recipe.create({
       title: title.trim(),
-      emoji: emoji || "",
+      image,
       prepTime,
       country,
       babyStage,
@@ -318,7 +318,7 @@ const updateRecipe = async (req, res) => {
 
     const fields = [
       "title",
-      "emoji",
+      "image",
       "prepTime",
       "country",
       "babyStage",
@@ -439,6 +439,8 @@ const deleteRecipe = async (req, res) => {
 };
 
 const getBabyRecipes = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+
   try {
     if (
       !validateParams(req, res, {
@@ -462,21 +464,32 @@ const getBabyRecipes = async (req, res) => {
       });
     }
 
-    const recipes = await Recipe.find({
+    const query = {
       status: "published",
       isActive: true,
       babyStage: baby.babyStage,
       country: { $in: baby.selectedCountries },
-    })
-      .populate("country", "name")
-      .populate("babyStage", "title")
-      .sort({ createdAt: -1 });
+    };
+
+    const [recipes, total] = await Promise.all([
+      Recipe.find(query)
+        .populate("country", "name")
+        .populate("babyStage", "title")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+
+      Recipe.countDocuments(query),
+    ]);
+
+    const meta = generateMeta(page, limit, total);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: recipes,
+      meta,
     });
   } catch (error) {
     return sendResponse({

@@ -116,7 +116,7 @@ const getFavorites = async (req, res) => {
       .populate({
         path: "recipe",
         select:
-          "title emoji image prepTime mealType nutritionTags acceptanceLabel difficulty",
+          "title image prepTime mealType nutritionTags acceptanceLabel",
       })
       .sort({ createdAt: -1 });
 

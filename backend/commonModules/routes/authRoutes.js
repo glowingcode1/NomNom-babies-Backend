@@ -11,6 +11,7 @@ const {
   deleteAccount,
   socialAuth,
   forgetPassword,
+  changePassword,
 } = require("../controllers/authController");
 const createRateLimiter = require("@utils/rateLimiter");
 
@@ -24,6 +25,7 @@ const resendOtpRateLimiter = createRateLimiter("resendOtp", 15, 15); // 15 reque
 const verifyOtpRateLimiter = createRateLimiter("verifyOtp", 15, 15); // 10 requests per 10 minutes
 
 const resetPasswordRateLimiter = createRateLimiter("resetPassword", 15, 15); // 15 requests per 15 minutes
+const changePasswordRateLimiter = createRateLimiter("changePassword", 15, 15); // 15 requests per 15 minutes
 
 // Apply rate limiters to routes
 router.post("/register", signupRateLimiter, register);
@@ -46,6 +48,7 @@ router.post("/verify-otp/phone", verifyOtpRateLimiter, (req, res, next) => {
 });
 router.post("/forgot-password", generateOtpRateLimiter, forgetPassword);
 router.post("/reset-password", resetPasswordRateLimiter, resetPassword);
+router.post("/change-password", auth, changePasswordRateLimiter, changePassword);
 
 router.post("/logout", auth, logout);
 router.delete("/delete-account", auth, deleteAccount);

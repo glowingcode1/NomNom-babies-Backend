@@ -34,6 +34,22 @@ const feedingSlotSchema = new mongoose.Schema({
   },
 });
 
+const dayScheduleSchema = new mongoose.Schema({
+  dayNumber: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 7,
+  },
+
+  date: {
+    type: String,
+    required: true,
+  },
+
+  slots: [feedingSlotSchema],
+});
+
 const feedingScheduleSchema = new mongoose.Schema(
   {
     baby: {
@@ -46,7 +62,7 @@ const feedingScheduleSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    slots: [feedingSlotSchema],
+    weekSchedules: [dayScheduleSchema],
   },
   { timestamps: true },
 );

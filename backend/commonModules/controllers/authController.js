@@ -1,6 +1,7 @@
 const { User, generateResetToken } = require("@models/UserModel");
 const mongoose = require("mongoose");
 const moment = require("moment-timezone");
+const Baby = require("@models/Baby");
 const { sendResponse, validateParams } = require("@utils/responseUtil");
 const { formatUserResponse } = require("@utils/userResponseUtil");
 const { sendEmailViaBrevo } = require("@utils/emailUtil");
@@ -10,6 +11,7 @@ const {
 } = require("@utils/emailTemplates");
 const { createOrSkipDevice, Devices } = require("@models/Devices");
 const validator = require("validator");
+const bcrypt = require("bcryptjs");
 
 const normalizeRole = (role) => {
   if (!role) {
@@ -91,16 +93,74 @@ const register = async (req, res) => {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase();
-    const existingUser = await User.findOne({ email: normalizedEmail });
+    const assignedRole = isAdminSignup ? "admin" : "user";
+    const existingUser = await User.findOne({
+      email: normalizedEmail,
+    });
 
     if (existingUser) {
-      return sendResponse({
-        res,
-        statusCode: 409,
-        translationKey: "email_already",
-      });
+      // verified email already exists
+      if (existingUser.verificationStatus.email === "verified") {
+        return sendResponse({
+          res,
+          statusCode: 409,
+          translationKey: "email_already",
+        });
+      }
+
+      // pending email
+      if (existingUser.verificationStatus.email === "pending") {
+        existingUser.name = name;
+
+        existingUser.password = password;
+
+        existingUser.phoneNumber = isAdminSignup ? undefined : phoneNumber;
+
+        existingUser.parentCaregiverName = isAdminSignup
+          ? undefined
+          : parentCaregiverName;
+
+        existingUser.profileIcon = profileIcon;
+
+        existingUser.timezone = timezone || "Asia/Karachi";
+
+        existingUser.language = language;
+
+        existingUser.accountState.userType = assignedRole;
+
+        existingUser.verificationStatus.email = "pending";
+
+        existingUser.verificationStatus.phoneNumber = isAdminSignup
+          ? "verified"
+          : "pending";
+
+        const otp = existingUser.generateOtp("email", existingUser.timezone);
+
+        await existingUser.save();
+
+        if (deviceId && deviceType) {
+          await createOrSkipDevice(existingUser._id, deviceId, deviceType);
+        }
+
+        const token = existingUser.generateAuthToken();
+
+        const response = await getFormattedUserResponse(existingUser, token);
+
+        return sendResponse({
+          res,
+
+          statusCode: 201,
+
+          translationKey: "signup_successful",
+
+          data: {
+            ...response,
+
+            otp,
+          },
+        });
+      }
     }
-    const assignedRole = isAdminSignup ? "admin" : "user";
 
     const user = await User.create({
       email: normalizedEmail,
@@ -172,32 +232,34 @@ const login = async (req, res) => {
         "timezone",
       ],
     };
+
     if (!validateParams(req, res, validationOptions)) {
       return;
     }
 
     const user = await User.findByCredentials(email, password);
 
-    // Check if an error occurred
     if (user.error) {
       if (user.error === "user_not_found") {
         return sendResponse({
           res,
           statusCode: 404,
-          translationKey: "user_not_found", // Use your translation key for user not found
+          translationKey: "user_not_found",
         });
-      } else if (user.error === "incorrect_password") {
+      }
+
+      if (user.error === "incorrect_password") {
         return sendResponse({
           res,
           statusCode: 401,
-          translationKey: "incorrect_password", // Use your translation key for incorrect password
+          translationKey: "incorrect_password",
         });
       }
     }
 
     if (
-      user.accountState.status === "restricted" ||
-      user.accountState.status === "suspended"
+      user.accountState?.status === "restricted" ||
+      user.accountState?.status === "suspended"
     ) {
       return sendResponse({
         res,
@@ -206,16 +268,23 @@ const login = async (req, res) => {
       });
     }
 
-    // Check the user's verification status
-    const verificationStatus = user.verificationStatus["email"];
+    const verificationStatus = user.verificationStatus?.email;
+
     if (verificationStatus === "pending") {
-      const otp = user.generateOtp("email", user.timezone || "UTC");
+      const otp = user.generateOtp("email", user.timezone);
+
       await user.save();
+
       return sendResponse({
         res,
+
         statusCode: 401,
-        translationKey: "email_not_verified",
-        data: { otp }, // Optionally include OTP in the response for testing purposes
+
+        translationKey: "your_account",
+
+        data: {
+          otp,
+        },
       });
     }
 
@@ -224,12 +293,12 @@ const login = async (req, res) => {
     let shouldSave = false;
 
     if (language && user.language !== language) {
-      user.language === language;
+      user.language = language;
       shouldSave = true;
     }
 
     if (timezone && user.timezone !== timezone) {
-      user.timezone === timezone;
+      user.timezone = timezone;
       shouldSave = true;
     }
 
@@ -239,10 +308,35 @@ const login = async (req, res) => {
 
     const token = user.generateAuthToken();
 
-    // Format the user response using the utility function
+    // Get active baby
+    let activeBaby = null;
+
+    if (user.activeBaby) {
+      activeBaby = await Baby.findById(user.activeBaby)
+        .populate("babyStage")
+        .populate("selectedCountries");
+    }
+
     const response = formatUserResponse(user, token, [], ["resetToken"]);
 
-    // Send successful response with token and user data
+    response.babyInfo = activeBaby
+      ? {
+          _id: activeBaby._id,
+          name: activeBaby.name,
+          dob: activeBaby.dob,
+          gender: activeBaby.gender,
+          stage: activeBaby.babyStage?.title || null,
+          selectedCountries:
+            activeBaby.selectedCountries?.map((country) => ({
+              _id: country._id,
+              name: country.name,
+            })) || [],
+        }
+      : null;
+
+    // Frontend can use this to redirect
+    response.hasBaby = !!activeBaby;
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -250,11 +344,13 @@ const login = async (req, res) => {
       data: response,
     });
   } catch (error) {
-    console.log("error:", error);
+    console.error("Login Error:", error);
+
     return sendResponse({
       res,
-      statusCode: 400,
-      translationKey: error,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
     });
   }
 };
@@ -711,8 +807,8 @@ const deleteAccount = async (req, res) => {
 const socialAuth = async (req, res) => {
   const { provider, socialId, email, name, deviceId, deviceType, timezone } =
     req.body;
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  // const session = await mongoose.startSession();
+  // session.startTransaction();
 
   try {
     const validationOptions = {
@@ -769,7 +865,8 @@ const socialAuth = async (req, res) => {
       existingUser.timezone = timezone; // Update the timezone to reflect the user's current login
       existingUser.accountState.status = "active"; // Ensure the account is active
 
-      await existingUser.save({ session });
+      // await existingUser.save({ session });
+      await existingUser.save();
       const token = existingUser.generateAuthToken();
 
       const response = formatUserResponse(existingUser, token);
@@ -777,8 +874,8 @@ const socialAuth = async (req, res) => {
       // Save device information
       createOrSkipDevice(existingUser._id, deviceId, deviceType);
 
-      await session.commitTransaction();
-      session.endSession();
+      // await session.commitTransaction();
+      // session.endSession();
 
       return sendResponse({
         res,
@@ -803,7 +900,8 @@ const socialAuth = async (req, res) => {
         },
       });
 
-      await newUser.save({ session });
+      // await newUser.save({ session });
+      await newUser.save();
 
       // Generate a token for the new user
       const token = newUser.generateAuthToken();
@@ -813,8 +911,8 @@ const socialAuth = async (req, res) => {
       // Save device information
       createOrSkipDevice(newUser._id, deviceId, deviceType);
 
-      await session.commitTransaction();
-      session.endSession();
+      // await session.commitTransaction();
+      // session.endSession();
 
       return sendResponse({
         res,
@@ -825,13 +923,76 @@ const socialAuth = async (req, res) => {
     }
   } catch (error) {
     // Rollback transaction in case of any error
-    await session.abortTransaction();
-    session.endSession();
+    // await session.abortTransaction();
+    // session.endSession();
     return sendResponse({
       res,
       statusCode: 500,
       translationKey: error.message,
       error: error,
+    });
+  }
+};
+
+// change-password
+const changePassword = async (req, res) => {
+  try {
+    const { newPassword, confirmPassword } = req.body;
+
+    if (
+      !validateParams(req, res, {
+        rawData: ["newPassword", "confirmPassword"],
+        minLengthFields: {
+          newPassword: 6,
+        },
+      })
+    )
+      return;
+
+    if (newPassword !== confirmPassword) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "passwords_do_not_match",
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "user_not_found",
+      });
+    }
+
+    // prevent same password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+
+    if (isSamePassword) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "new_password_should_not_be_same_as_current",
+      });
+    }
+
+    user.password = newPassword;
+
+    await user.save();
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "password_changed_successfully",
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
     });
   }
 };
@@ -847,4 +1008,5 @@ module.exports = {
   logout,
   deleteAccount,
   socialAuth,
+  changePassword,
 };

@@ -10,6 +10,7 @@ const { formatUserResponse } = require("@utils/userResponseUtil");
 const { NotificationTypes } = require("@models/Notifications");
 const validator = require("validator");
 const { userCache } = require("@config/nodeCache");
+const Baby = require("@models/Baby");
 
 // Block User Function
 const blockUser = async (req, res) => {
@@ -388,7 +389,31 @@ const getUserProfile = async (req, res, next, fieldsToPopulate = []) => {
       });
     }
 
+    let activeBaby = null;
+
+    if (user.activeBaby) {
+      activeBaby = await Baby.findById(user.activeBaby)
+        .populate("babyStage")
+        .populate("selectedCountries");
+    }
+
     const response = formatUserResponse(user, null, [], ["resetToken"]);
+    response.babyInfo = activeBaby
+      ? {
+          _id: activeBaby._id,
+          profileIcon: activeBaby.profileIcon,
+          name: activeBaby.name,
+          stage: activeBaby.babyStage?.title || null,
+
+          selectedCountries:
+            activeBaby.selectedCountries?.map((country) => ({
+              _id: country._id,
+              name: country.name,
+            })) || [],
+        }
+      : null;
+
+    response.hasBaby = !!activeBaby;
     return sendResponse({
       res,
       statusCode: 200,
@@ -470,15 +495,7 @@ const getOtherUserProfile = async (req, res, next) => {
  * @returns {Promise<void>}
  */
 const updateUserProfile = async (req, res, next) => {
-  const {
-    name,
-    profileIcon,
-    phoneNumber,
-    location,
-    distanceUnit,
-    currencySymbol,
-    currencyCode,
-  } = req.body;
+  const { name, profileIcon, phoneNumber, location, distanceUnit } = req.body;
   const currentUser = req.user;
 
   try {

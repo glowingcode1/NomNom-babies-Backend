@@ -13,6 +13,8 @@ const feedingScheduleRoutes = require("./feedingScheduleRoutes.js");
 const languageRoutes = require("./languageRoutes.js");
 const favoriteRecipeRoutes = require("./FavoriteRecipeRoutes.js");
 const groceryListRoutes = require("./groceryListRoutes.js");
+const foodTrackerRoutes = require("./foodTrackerRoutes.js");
+const feedingTimeTableRoutes = require("./feedingTimeTableRoutes.js");
 
 router.use("/upload", uploadRoutes);
 router.use("/upload/s3", uploads3Routes);
@@ -25,5 +27,7 @@ router.use("/feeding-schedule", feedingScheduleRoutes);
 router.use("/languages", languageRoutes);
 router.use("/favorites", favoriteRecipeRoutes);
 router.use("/grocery-list", groceryListRoutes);
+router.use("/food-tracker", foodTrackerRoutes);
+router.use("/feeding-timetable", feedingTimeTableRoutes);
 
 module.exports = router;

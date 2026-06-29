@@ -2,6 +2,10 @@ const mongoose = require("mongoose");
 
 const foodTrackerSchema = new mongoose.Schema(
   {
+    image: {
+      type: String,
+      default: "",
+    },
     baby: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Baby",
@@ -34,4 +38,7 @@ const foodTrackerSchema = new mongoose.Schema(
   },
 );
 
-module.exports = mongoose.model("FoodTracker", foodTrackerSchema);
+const FoodTracker =
+  mongoose.models.FoodTracker ||
+  mongoose.model("FoodTracker", foodTrackerSchema);
+module.exports = FoodTracker;

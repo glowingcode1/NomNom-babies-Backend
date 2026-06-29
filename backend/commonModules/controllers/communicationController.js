@@ -3,14 +3,12 @@ const {
   sendEmailViaSgrid,
   sendEmailViaAwsSes,
   sendSmsViaPinpoint,
-  sendEmailViaBrevo
+  sendEmailViaBrevo,
 } = require("@utils/emailUtil");
 const { Devices } = require("@models/Devices");
 const { sendResponse, validateParams } = require("@utils/responseUtil");
 const adminFireBConfig = require("@config/firebaseAdmin"); // Firebase admin SDK setup
-const {
-  registrationOtpEmailTemplate,
-} = require("@utils/emailTemplates");
+const { registrationOtpEmailTemplate } = require("@utils/emailTemplates");
 const { NotificationExp } = require("@models/Notifications");
 const { Vonage } = require("@vonage/server-sdk");
 
@@ -252,7 +250,7 @@ const sendUserNotifications = async ({
             userId: userDevice.userId,
             deviceId: device.deviceId,
             deviceType: device.deviceType,
-          }))
+          })),
         );
 
         // Group devices by userId and ensure no duplicate device IDs
@@ -272,7 +270,7 @@ const sendUserNotifications = async ({
             (device) => ({
               deviceId: device.deviceId,
               deviceType: device.deviceType,
-            })
+            }),
           ); // Convert Set to Array and include deviceType
 
           // Send notifications without awaiting
@@ -290,10 +288,13 @@ const sendUserNotifications = async ({
           responses.push({ userId, sendNotificationResponse });
         }
 
-        console.log(data)
+        console.log(data);
 
         responses.forEach((response) => {
-          console.log(`Response for user ${response.userId}:`, JSON.stringify(response.sendNotificationResponse, null, 2));
+          console.log(
+            `Response for user ${response.userId}:`,
+            JSON.stringify(response.sendNotificationResponse, null, 2),
+          );
         });
 
         // Process the notifications after sending them
@@ -478,7 +479,7 @@ const sendSmsViaVonage = async (req, res) => {
         } else {
           console.error(
             "Failed to send message. Status:",
-            responseData.messages[0].status
+            responseData.messages[0].status,
           );
           return sendResponse({
             res,
@@ -500,8 +501,7 @@ const sendSmsViaVonage = async (req, res) => {
   }
 };
 
-
-const axios = require('axios');
+const axios = require("axios");
 
 const sendSMSSomalianAPI = async (req, res) => {
   const { phoneNumber, otp } = req.body;
@@ -518,34 +518,40 @@ const sendSMSSomalianAPI = async (req, res) => {
   }
 
   try {
-    const apiKey = '07098f01-6071-4045-abd8-63a7ec3e25ac'; // Replace with your actual API Key
-    const apiSecret = '5810f9db-bd8e-4002-ab57-721ab0d8ee1e'; // Replace with your actual API Secret
+    const apiKey = "07098f01-6071-4045-abd8-63a7ec3e25ac"; // Replace with your actual API Key
+    const apiSecret = "5810f9db-bd8e-4002-ab57-721ab0d8ee1e"; // Replace with your actual API Secret
 
     // Combine API credentials
     const accountApiCredentials = `${apiKey}:${apiSecret}`;
 
     // Convert credentials to base64
     const buff = Buffer.from(accountApiCredentials);
-    const base64Credentials = buff.toString('base64');
+    const base64Credentials = buff.toString("base64");
 
     // Set the request headers, including the Authorization header
     const requestHeaders = {
       headers: {
-        'Authorization': `Basic ${base64Credentials}`,
-        'Content-Type': 'application/json'
-      }
+        Authorization: `Basic ${base64Credentials}`,
+        "Content-Type": "application/json",
+      },
     };
 
     // Construct the request data (the SMS content and destination number)
     const requestData = JSON.stringify({
-      messages: [{
-        content: message, // Message content
-        destination: phoneNumber // Destination phone number
-      }]
+      messages: [
+        {
+          content: message, // Message content
+          destination: phoneNumber, // Destination phone number
+        },
+      ],
     });
 
     // Send the POST request to the API endpoint
-    const response = await axios.post('https://rest.mymobileapi.com/bulkmessages', requestData, requestHeaders);
+    const response = await axios.post(
+      "https://rest.mymobileapi.com/bulkmessages",
+      requestData,
+      requestHeaders,
+    );
 
     if (response.data) {
       console.log("Success:", response.data);
@@ -567,8 +573,6 @@ const sendSMSSomalianAPI = async (req, res) => {
   }
 };
 
-
-
 module.exports = {
   sendEmailSgrid,
   sendEmailAws,
@@ -577,5 +581,5 @@ module.exports = {
   sendUserNotifications,
   sendSmsViaVonage,
   sendSMSSomalianAPI,
-  sendEmailBrevo
+  sendEmailBrevo,
 };

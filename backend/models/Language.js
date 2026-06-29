@@ -6,6 +6,10 @@ const languageSchema = new mongoose.Schema(
       type: String,
       required: [true, "language_title_required"], // Custom error message key
     },
+    image: {
+      type: String,
+      default: "",
+    },
     transliteration: {
       type: String,
       default: "",
@@ -44,7 +48,7 @@ const languageSchema = new mongoose.Schema(
         return ret;
       },
     },
-  }
+  },
 );
 
 module.exports = mongoose.model("Language", languageSchema);

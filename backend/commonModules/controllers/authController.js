@@ -263,7 +263,7 @@ const login = async (req, res) => {
     ) {
       return sendResponse({
         res,
-        statusCode: 403,
+        statusCode: 401,
         translationKey: "your_account_2",
       });
     }
@@ -278,7 +278,7 @@ const login = async (req, res) => {
       return sendResponse({
         res,
 
-        statusCode: 401,
+        statusCode: 403,
 
         translationKey: "your_account",
 
@@ -313,8 +313,8 @@ const login = async (req, res) => {
 
     if (user.activeBaby) {
       activeBaby = await Baby.findById(user.activeBaby)
-        .populate("babyStage")
-        .populate("selectedCountries");
+        .populate("babyStage", "_id title")
+        .populate("selectedCountries", "_id name");
     }
 
     const response = formatUserResponse(user, token, [], ["resetToken"]);
@@ -322,10 +322,22 @@ const login = async (req, res) => {
     response.babyInfo = activeBaby
       ? {
           _id: activeBaby._id,
+
           name: activeBaby.name,
-          dob: activeBaby.dob,
-          gender: activeBaby.gender,
-          stage: activeBaby.babyStage?.title || null,
+
+          profileIcon: activeBaby.profileIcon || "",
+
+          dob: activeBaby.dob || null,
+
+          gender: activeBaby.gender || null,
+
+          babyStage: activeBaby.babyStage
+            ? {
+                _id: activeBaby.babyStage._id,
+                title: activeBaby.babyStage.title,
+              }
+            : null,
+
           selectedCountries:
             activeBaby.selectedCountries?.map((country) => ({
               _id: country._id,
@@ -334,7 +346,6 @@ const login = async (req, res) => {
         }
       : null;
 
-    // Frontend can use this to redirect
     response.hasBaby = !!activeBaby;
 
     return sendResponse({
@@ -664,6 +675,9 @@ const forgetPassword = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "otp_sent_successfully",
+      data: {
+        otp,
+      },
     });
   } catch (error) {
     return sendResponse({

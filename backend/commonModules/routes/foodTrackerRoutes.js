@@ -9,7 +9,7 @@ const {
 const router = express.Router();
 
 router.post("/", auth, createFoodTracker);
-router.get("/baby/:babyId", auth, getFoodTracker);
+router.get("/baby", auth, getFoodTracker);
 
 // ADMIN
 router.get("/admin", auth, getAllFoodTrackers);

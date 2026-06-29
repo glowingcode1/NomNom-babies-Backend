@@ -127,7 +127,7 @@ const selectCountries = async (req, res) => {
         "onboarding.completed": true,
       },
       { new: true },
-    ).populate("onboarding.selectedCountries", "name signatureFoods");
+    ).populate("onboarding.selectedCountries", "_id name signatureFoods");
 
     return sendResponse({
       res,

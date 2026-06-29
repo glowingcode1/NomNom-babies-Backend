@@ -3,6 +3,7 @@ const FeedingSchedule = require("@models/FeedingSchedule");
 const FeedingLog = require("@models/FeedingLog");
 const { User } = require("@models/UserModel");
 const { sendResponse } = require("@utils/responseUtil");
+const { getBabyInfo } = require("@utils/babyUtil");
 
 const getFeedingTimetable = async (req, res) => {
   try {
@@ -21,8 +22,8 @@ const getFeedingTimetable = async (req, res) => {
     }
 
     const baby = await Baby.findById(user.activeBaby)
-      .populate("babyStage")
-      .populate("selectedCountries");
+      .populate("babyStage", "_id title")
+      .populate("selectedCountries", "_id name");
 
     if (!baby) {
       return sendResponse({
@@ -38,7 +39,10 @@ const getFeedingTimetable = async (req, res) => {
       FeedingSchedule.findOne({
         baby: baby._id,
         user: req.user._id,
-      }).populate("weekSchedules.slots.recipe", "title image mealType prepTime"),
+      }).populate(
+        "weekSchedules.slots.recipe",
+        "_id title image mealType prepTime",
+      ),
 
       FeedingLog.find({
         baby: baby._id,
@@ -49,8 +53,12 @@ const getFeedingTimetable = async (req, res) => {
 
     const completedIds = new Set(logs.map((log) => String(log.slotId)));
 
+    const todaySchedule = schedule?.weekSchedules?.find(
+      (day) => day.date === today,
+    );
+
     const recommendedToday =
-      schedule?.slots?.map((slot) => ({
+      todaySchedule?.slots?.map((slot) => ({
         slotId: slot._id,
 
         type: slot.type,
@@ -61,11 +69,15 @@ const getFeedingTimetable = async (req, res) => {
 
         description: slot.description,
 
+        amount: slot.amount,
+
         recipe: slot.recipe
           ? {
               _id: slot.recipe._id,
               title: slot.recipe.title,
               image: slot.recipe.image,
+              mealType: slot.recipe.mealType,
+              prepTime: slot.recipe.prepTime,
             }
           : null,
 
@@ -78,7 +90,7 @@ const getFeedingTimetable = async (req, res) => {
       recommendedToday.length === 0
         ? 0
         : Math.round(
-            (recommendedToday.filter((x) => x.completed).length /
+            (recommendedToday.filter((meal) => meal.completed).length /
               recommendedToday.length) *
               100,
           );
@@ -89,17 +101,7 @@ const getFeedingTimetable = async (req, res) => {
       translationKey: "data_fetched_successfully",
 
       data: {
-        babyInfo: {
-          babyId: baby._id,
-
-          babyName: baby.name,
-
-          profileIcon: baby.profileIcon,
-
-          stage: baby.babyStage?.title,
-
-          countries: baby.selectedCountries.map((c) => c.name),
-        },
+        babyInfo: getBabyInfo(baby),
 
         completionRate,
 
@@ -120,9 +122,7 @@ const getFeedingTimetable = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 500,
-
       translationKey: "internal_server",
-
       error: error.message,
     });
   }

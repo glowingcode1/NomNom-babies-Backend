@@ -24,8 +24,8 @@ const getRecipes = async (req, res) => {
 
     const [recipes, total] = await Promise.all([
       Recipe.find(query)
-        .populate("country", "name")
-        .populate("babyStage", "title")
+        .populate("country", "_id name")
+        .populate("babyStage", "_id title")
         .select(
           "title image prepTime mealType nutritionTags country babyStage",
         )
@@ -67,8 +67,8 @@ const getRecipeById = async (req, res) => {
       status: "published",
       isActive: true,
     })
-      .populate("country", "name")
-      .populate("babyStage", "title features");
+      .populate("country", "_id name")
+      .populate("babyStage", "_id title features");
 
     if (!recipe) {
       return sendResponse({
@@ -111,8 +111,8 @@ const adminGetRecipes = async (req, res) => {
 
     const [recipes, total] = await Promise.all([
       Recipe.find(query)
-        .populate("country", "name")
-        .populate("babyStage", "title")
+        .populate("country", "_id name")
+        .populate("babyStage", "_id title")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit),
@@ -171,8 +171,8 @@ const getUserRecipes = async (req, res) => {
       isActive: true,
       $or: [{ babyStage: { $in: stageIds } }, { country: { $in: countryIds } }],
     })
-      .populate("country", "name")
-      .populate("babyStage", "title")
+      .populate("country", "_id name")
+      .populate("babyStage", "_id title")
       .select(
         "title image prepTime mealType nutritionTags country babyStage",
       )
@@ -224,8 +224,8 @@ const getUserBabyRecipes = async (req, res) => {
       babyStage: baby.babyStage,
       country: { $in: baby.selectedCountries },
     })
-      .populate("country", "name")
-      .populate("babyStage", "title")
+      .populate("country", "_id name")
+      .populate("babyStage", "_id title")
       .sort({ createdAt: -1 });
 
     return sendResponse({
@@ -473,8 +473,8 @@ const getBabyRecipes = async (req, res) => {
 
     const [recipes, total] = await Promise.all([
       Recipe.find(query)
-        .populate("country", "name")
-        .populate("babyStage", "title")
+        .populate("country", "_id name")
+        .populate("babyStage", "_id title")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit),

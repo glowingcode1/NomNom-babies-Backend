@@ -1,4 +1,5 @@
 const FoodTracker = require("@models/FoodTracker");
+const { User } = require("@models/UserModel");
 const {
   generateMeta,
   parsePaginationParams,
@@ -8,7 +9,6 @@ const {
 
 const createFoodTracker = async (req, res) => {
   try {
-
     if (
       !validateParams(req, res, {
         rawData: ["baby", "ingredientName", "date", "reaction"],
@@ -35,7 +35,6 @@ const createFoodTracker = async (req, res) => {
       data: foodTracker,
     });
   } catch (error) {
-
     return sendResponse({
       res,
       statusCode: 500,
@@ -47,24 +46,48 @@ const createFoodTracker = async (req, res) => {
 
 const getFoodTracker = async (req, res) => {
   try {
-    const { babyId } = req.params;
+    const { page, limit } = parsePaginationParams(req);
 
-    const foodTracker = await FoodTracker.find({
-      baby: babyId,
+    const user = await User.findById(req.user._id);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const query = {
+      baby: user.activeBaby,
       user: req.user._id,
-    }).sort({ date: -1 });
+    };
+
+    const [foodTracker, totalRecords] = await Promise.all([
+      FoodTracker.find(query)
+        .sort({ date: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+
+      FoodTracker.countDocuments(query),
+    ]);
+
+    const meta = generateMeta(page, limit, totalRecords);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "food_tracker_fetched_successfully",
+
       data: foodTracker,
+
+      meta,
     });
   } catch (error) {
     return sendResponse({
       res,
       statusCode: 500,
-      trasnlationKey: error.message,
+      translationKey: error.message,
       error,
     });
   }
@@ -76,8 +99,8 @@ const getAllFoodTrackers = async (req, res) => {
 
     const [foodTrackers, totalRecords] = await Promise.all([
       FoodTracker.find()
-        .populate("baby", "name")
-        .populate("user", "name email")
+        .populate("baby", "_id name")
+        .populate("user", "_id name email")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit),

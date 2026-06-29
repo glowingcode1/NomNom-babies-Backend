@@ -12,6 +12,7 @@ const {
   getScheduleSlotDetail,
   getUserFeedingSchedules,
   getUserBabyFeedingSchedule,
+  startFeedingPlan,
 } = require("../controllers/feedingScheduleController");
 
 const router = express.Router();
@@ -35,5 +36,6 @@ router.delete("/slot/:slotId", auth, removeScheduleSlot);
 router.put("/:id", auth, updateLimiter, updateFeedingSchedule);
 router.delete("/:id", auth, deleteLimiter, deleteFeedingSchedule);
 router.patch("/toggle", auth, toggleLimiter, toggleSlotCompletion);
+router.post("/start", auth, startFeedingPlan);
 
 module.exports = router;

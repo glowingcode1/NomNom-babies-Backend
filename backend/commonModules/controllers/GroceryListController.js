@@ -49,6 +49,7 @@ const addRecipeToGroceryList = async (req, res) => {
         name: ingredient.name,
         quantity: ingredient.quantity,
         category: ingredient.category,
+        icon: ingredient.icon,
         checked: false,
       })),
     });
@@ -75,7 +76,7 @@ const addRecipeToGroceryList = async (req, res) => {
 const getGroceryList = async (req, res) => {
   const groceryList = await GroceryList.findOne({
     user: req.user._id,
-  }).populate("recipes.recipe", "title image emoji");
+  }).populate("recipes.recipe", "_id title image");
 
   if (!groceryList) {
     return sendResponse({
@@ -99,8 +100,6 @@ const getGroceryList = async (req, res) => {
     title: r.recipe.title,
 
     image: r.recipe.image,
-
-    emoji: r.recipe.emoji,
   }));
 
   const groceryChecklist = [];
@@ -113,6 +112,8 @@ const getGroceryList = async (req, res) => {
         _id: ingredient._id,
 
         name: ingredient.name,
+
+        icon: ingredient.icon,
 
         quantity: ingredient.quantity,
 

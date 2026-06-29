@@ -8,6 +8,11 @@ const {
   parsePaginationParams,
   generateMeta,
 } = require("@utils/responseUtil");
+const FeedingSchedule = require("@models/FeedingSchedule");
+const FeedingLog = require("@models/FeedingLog");
+const Recipe = require("@models/Recipe");
+const FoodTracker = require("@models/FoodTracker");
+const { getBabyInfo } = require("@utils/babyUtil");
 
 // Create a new baby profile
 const createBaby = async (req, res) => {
@@ -80,8 +85,8 @@ const createBaby = async (req, res) => {
     await user.save();
 
     await baby.populate([
-      { path: "babyStage", select: "title features" },
-      { path: "selectedCountries", select: "name signatureFoods" },
+      { path: "babyStage", select: "_id title features" },
+      { path: "selectedCountries", select: "_id name signatureFoods" },
     ]);
 
     return sendResponse({
@@ -103,16 +108,30 @@ const createBaby = async (req, res) => {
 // Get all babies for logged-in user
 const getBabies = async (req, res) => {
   try {
-    const babies = await Baby.find({ user: req.user._id, isActive: true })
-      .populate("babyStage", "title features")
-      .populate("selectedCountries", "name signatureFoods")
-      .sort({ createdAt: 1 });
+    const { page, limit } = parsePaginationParams(req);
+    const query = {
+      user: req.user._id,
+      isActive: true,
+    };
+    const [babies, totalRecords] = await Promise.all([
+      Baby.find(query)
+        .populate("babyStage", "_id title features")
+        .populate("selectedCountries", "_id name signatureFoods")
+        .sort({ createdAt: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+
+      Baby.countDocuments(query),
+    ]);
+
+    const meta = generateMeta(page, limit, totalRecords);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: babies,
+      meta,
     });
   } catch (error) {
     return sendResponse({
@@ -128,6 +147,8 @@ const getUserBabies = async (req, res) => {
   try {
     const { id } = req.params;
 
+    const { page, limit } = parsePaginationParams(req);
+
     const user = await User.findById(id);
 
     if (!user) {
@@ -138,19 +159,30 @@ const getUserBabies = async (req, res) => {
       });
     }
 
-    const babies = await Baby.find({
+    const query = {
       user: id,
       isActive: true,
-    })
-      .populate("babyStage", "title features")
-      .populate("selectedCountries", "name signatureFoods")
-      .sort({ createdAt: 1 });
+    };
+
+    const [babies, totalRecords] = await Promise.all([
+      Baby.find(query)
+        .populate("babyStage", "_id title features")
+        .populate("selectedCountries", "_id name signatureFoods")
+        .sort({ createdAt: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+
+      Baby.countDocuments(query),
+    ]);
+
+    const meta = generateMeta(page, limit, totalRecords);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: babies,
+      meta,
     });
   } catch (error) {
     return sendResponse({
@@ -175,8 +207,8 @@ const getBabyById = async (req, res) => {
       user: req.user._id,
       isActive: true,
     })
-      .populate("babyStage", "title features")
-      .populate("selectedCountries", "name signatureFoods");
+      .populate("babyStage", "_id title features")
+      .populate("selectedCountries", "_id name signatureFoods");
 
     if (!baby) {
       return sendResponse({
@@ -271,8 +303,8 @@ const updateBaby = async (req, res) => {
 
     await baby.save();
     await baby.populate([
-      { path: "babyStage", select: "title features" },
-      { path: "selectedCountries", select: "name signatureFoods" },
+      { path: "babyStage", select: "_id title features" },
+      { path: "selectedCountries", select: "_id name signatureFoods" },
     ]);
 
     return sendResponse({
@@ -340,6 +372,7 @@ const deleteBaby = async (req, res) => {
 // Switch active baby
 const switchActiveBaby = async (req, res) => {
   try {
+    const userId = req.user._id;
     if (
       !validateParams(req, res, {
         rawData: ["babyId"],
@@ -368,26 +401,66 @@ const switchActiveBaby = async (req, res) => {
     await baby.populate([
       {
         path: "babyStage",
-        select: "title",
+        select: "_id title",
       },
       {
         path: "selectedCountries",
-        select: "name",
+        select: "_id name",
       },
     ]);
+
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+
+    const feedingSchedule = await FeedingSchedule.findOne({
+      baby: baby._id,
+      user: req.user._id,
+    }).populate("weekSchedules.slots.recipe", "title image prepTime");
+
+    const todaySchedule = feedingSchedule?.weekSchedules?.find(
+      (day) => day.date === today,
+    );
+
+    const allLogs = await FeedingLog.find({
+      baby: baby._id,
+      user: req.user._id,
+    });
+
+    const culturalRecipes = await Recipe.find({
+      country: {
+        $in: baby.selectedCountries.map((c) => c._id),
+      },
+      stage: baby.babyStage?._id,
+      status: "published",
+      isActive: true,
+    });
+
+    const foodTracker = await FoodTracker.find({
+      baby: baby._id,
+      user: userId,
+    });
+
+    const completedSlotIds = new Set(
+      allLogs
+        .filter((log) => log.date === today)
+        .map((log) => String(log.slotId)),
+    );
+
+    const recommendedMeals =
+      todaySchedule?.slots?.map((slot) => ({
+        id: slot._id,
+        type: slot.type,
+        title: slot.title,
+        description: slot.description,
+        time: slot.time,
+        completed: completedSlotIds.has(String(slot._id)),
+      })) || [];
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "active_baby_switched_success",
       data: {
-        activeBaby: {
-          _id: baby._id,
-          name: baby.name,
-          profileIcon: baby.profileIcon,
-          stage: baby.babyStage?.title,
-          countries: baby.selectedCountries.map((c) => c.name),
-        },
+        babyInfo: getBabyInfo(baby),
       },
     });
   } catch (error) {

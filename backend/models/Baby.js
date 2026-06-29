@@ -36,6 +36,15 @@ const babySchema = new mongoose.Schema(
       default: true,
       required: true,
     },
+    feedingPlanStarted: {
+      type: Boolean,
+      default: false,
+    },
+
+    feedingPlanStartedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );

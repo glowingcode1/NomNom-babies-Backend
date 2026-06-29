@@ -1,8 +1,9 @@
 const FeedingSchedule = require("@models/FeedingSchedule");
 const FeedingLog = require("@models/FeedingLog");
 const { sendResponse, validateParams } = require("@utils/responseUtil");
-const Recipe = require("@models/Recipe");
+const Baby = require("@models/Baby");
 const mongoose = require("mongoose");
+const { User } = require("@models/UserModel");
 
 // Get feeding schedule for active baby on a given date
 const getFeedingSchedule = async (req, res) => {
@@ -19,7 +20,7 @@ const getFeedingSchedule = async (req, res) => {
     const schedule = await FeedingSchedule.findOne({
       baby: babyId,
       user: req.user._id,
-    }).populate("weekSchedules.slots.recipe", "title image prepTime");
+    }).populate("weekSchedules.slots.recipe", "_id title image prepTime");
 
     if (!schedule) {
       return sendResponse({
@@ -336,8 +337,8 @@ const getUserFeedingSchedules = async (req, res) => {
     const schedules = await FeedingSchedule.find({
       user: req.params.userId,
     })
-      .populate("baby", "name")
-      .populate("weekSchedules.slots.recipe", "title image prepTime")
+      .populate("baby", "_id name")
+      .populate("weekSchedules.slots.recipe", "_id title image prepTime")
       .sort({ createdAt: -1 });
 
     return sendResponse({
@@ -370,8 +371,8 @@ const getUserBabyFeedingSchedule = async (req, res) => {
       user: req.params.userId,
       baby: req.params.babyId,
     })
-      .populate("baby", "name")
-      .populate("weekSchedules.slots.recipe", "title image prepTime");
+      .populate("baby", "_id name")
+      .populate("weekSchedules.slots.recipe", "_id title image prepTime");
 
     if (!schedule) {
       return sendResponse({
@@ -448,6 +449,48 @@ const toggleSlotCompletion = async (req, res) => {
   }
 };
 
+const startFeedingPlan = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+
+        statusCode: 404,
+
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const baby = await Baby.findById(user.activeBaby);
+
+    baby.feedingPlanStarted = true;
+
+    baby.feedingPlanStartedAt = new Date();
+
+    await baby.save();
+
+    return sendResponse({
+      res,
+
+      statusCode: 200,
+
+      translationKey: "feeding_plan_started",
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+
+      statusCode: 500,
+
+      translationKey: "internal_server",
+
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getFeedingSchedule,
   getUserFeedingSchedules,
@@ -458,4 +501,5 @@ module.exports = {
   updateFeedingSchedule,
   deleteFeedingSchedule,
   toggleSlotCompletion,
+  startFeedingPlan,
 };

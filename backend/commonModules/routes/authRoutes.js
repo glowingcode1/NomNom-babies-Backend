@@ -46,7 +46,7 @@ router.post("/verify-otp/phone", verifyOtpRateLimiter, (req, res, next) => {
   req.body.type = "phoneNumber";
   verifyOtp(req, res, next);
 });
-router.post("/forgot-password", generateOtpRateLimiter, forgetPassword);
+router.post("/forget-password", generateOtpRateLimiter, forgetPassword);
 router.post("/reset-password", resetPasswordRateLimiter, resetPassword);
 router.post("/change-password", auth, changePasswordRateLimiter, changePassword);
 

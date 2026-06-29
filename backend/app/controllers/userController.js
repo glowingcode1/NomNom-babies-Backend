@@ -362,7 +362,7 @@ const getUserProfile = async (req, res, next, fieldsToPopulate = []) => {
 
     let query = User.findById(currentUser._id).populate(
       "onboarding.selectedCountries",
-      "name signatureFoods",
+      "_id name signatureFoods",
     );
 
     // Build the dynamic population based on the fields requested
@@ -393,17 +393,29 @@ const getUserProfile = async (req, res, next, fieldsToPopulate = []) => {
 
     if (user.activeBaby) {
       activeBaby = await Baby.findById(user.activeBaby)
-        .populate("babyStage")
-        .populate("selectedCountries");
+        .populate("babyStage", "_id title")
+        .populate("selectedCountries", "_id name");
     }
 
     const response = formatUserResponse(user, null, [], ["resetToken"]);
     response.babyInfo = activeBaby
       ? {
           _id: activeBaby._id,
-          profileIcon: activeBaby.profileIcon,
+
           name: activeBaby.name,
-          stage: activeBaby.babyStage?.title || null,
+
+          profileIcon: activeBaby.profileIcon || "",
+
+          dob: activeBaby.dob || null,
+
+          gender: activeBaby.gender || null,
+
+          babyStage: activeBaby.babyStage
+            ? {
+                _id: activeBaby.babyStage._id,
+                title: activeBaby.babyStage.title,
+              }
+            : null,
 
           selectedCountries:
             activeBaby.selectedCountries?.map((country) => ({
@@ -442,7 +454,7 @@ const getOtherUserProfile = async (req, res, next) => {
       Review.find({ object: userId, reviewType: "user" })
         .sort({ createdAt: -1 })
         .limit(5)
-        .populate("subject", "name profileIcon"),
+        .populate("subject", "_id name profileIcon"),
     ]);
 
     if (!user) {

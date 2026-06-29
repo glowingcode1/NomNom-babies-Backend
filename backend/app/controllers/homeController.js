@@ -8,6 +8,7 @@ const FoodIntroduction = require("@models/FoodIntroduction");
 const { User } = require("@models/UserModel");
 const { sendResponse } = require("@utils/responseUtil");
 const FoodTracker = require("@models/FoodTracker");
+const { getBabyInfo } = require("@utils/babyUtil");
 
 const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -28,8 +29,8 @@ const getHome = async (req, res) => {
     }
 
     const baby = await Baby.findById(user.activeBaby)
-      .populate("babyStage")
-      .populate("selectedCountries");
+      .populate("babyStage", "_id title")
+      .populate("selectedCountries", "_id name");
 
     if (!baby) {
       return sendResponse({
@@ -71,7 +72,7 @@ const getHome = async (req, res) => {
         country: {
           $in: baby.selectedCountries.map((c) => c._id),
         },
-        babyStage: baby.babyStage?._id,
+        stage: baby.babyStage?._id,
         status: "published",
         isActive: true,
       })
@@ -90,13 +91,6 @@ const getHome = async (req, res) => {
         .sort({ date: -1 })
         .limit(5),
     ]);
-
-    console.log(JSON.stringify(feedingSchedule?.weekSchedules, null, 2));
-    console.log("TODAY:", today);
-    console.log(
-      "AVAILABLE DATES:",
-      feedingSchedule?.weekSchedules?.map((d) => d.date),
-    );
 
     const completedSlotIds = new Set(
       todayLogs.map((log) => String(log.slotId)),
@@ -143,12 +137,7 @@ const getHome = async (req, res) => {
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: {
-        babyInfo: {
-          babyId: baby._id,
-          babyName: baby.name,
-          stage: baby.babyStage?.title || "",
-          countries: baby.selectedCountries.map((country) => country.name),
-        },
+        babyInfo: getBabyInfo(baby),
 
         recommendedToday: recommendedMeals,
 

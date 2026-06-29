@@ -23,7 +23,7 @@ const getNutritionByRecipe = async (req, res) => {
     const nutrition = await Nutrition.findOne({
       recipe: req.params.recipeId,
       isActive: true,
-    }).populate("recipe", "title");
+    }).populate("recipe", "_id title");
 
     if (!nutrition) {
       return sendResponse({

@@ -7,10 +7,6 @@ const recipeSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    emoji: {
-      type: String,
-      default: "",
-    },
     image: {
       type: String,
       default: "",
@@ -46,6 +42,10 @@ const recipeSchema = new mongoose.Schema(
       {
         name: { type: String, required: true },
         quantity: { type: String, default: "" },
+        icon: {
+          type: String,
+          default: "",
+        },
       },
     ],
     method: [

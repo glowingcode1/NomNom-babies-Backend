@@ -206,7 +206,7 @@ const topViewedRecipes = async (req, res) => {
     const recipes = await Recipe.find({
       status: "published",
     })
-      .populate("country", "name")
+      .populate("country", "_id name")
       .sort({ views: -1 })
       .limit(10)
       .select("title mealType views");
@@ -311,7 +311,7 @@ const topCountries = async (req, res) => {
 const recentActivities = async (req, res) => {
   try {
     const activities = await AdminActivity.find()
-      .populate("user", "name email")
+      .populate("user", "_id name email")
       .sort({ createdAt: -1 })
       .limit(10);
 
@@ -750,7 +750,7 @@ const topRatedUsers = async (req, res) => {
       .populate({
         path: "object",
         model: "User",
-        select: "name email profileIcon",
+        select: "_id name email profileIcon",
       })
       .sort({ rating: -1 })
       .limit(10);

@@ -22,12 +22,17 @@ const switchBabyRateLimiter = createRateLimiter("switchActiveBaby", 15, 15);
 
 // PUBLIC (any logged-in user)
 router.get("/", auth, getBabies);
-router.patch("/switch-active", auth, switchBabyRateLimiter, switchActiveBaby);
+router.post("/switch-active", auth, switchBabyRateLimiter, switchActiveBaby);
 router.get("/:id", auth, getBabyById);
 router.post("/", auth, createBabyRateLimiter, createBaby);
 router.put("/:id", auth, updateBabyRateLimiter, updateBaby);
 
 // SUPER ADMIN ONLY
-router.delete("/:id", auth, /**authorizeRoles("superAdmin"),**/ deleteBabyRateLimiter, deleteBaby);
+router.delete(
+  "/:id",
+  auth,
+  /**authorizeRoles("superAdmin"),**/ deleteBabyRateLimiter,
+  deleteBaby,
+);
 
 module.exports = router;

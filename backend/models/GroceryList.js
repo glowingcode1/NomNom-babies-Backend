@@ -5,6 +5,11 @@ const groceryIngredientSchema = new mongoose.Schema({
 
   quantity: String,
 
+  icon: {
+    type: String,
+    default: "",
+  },
+
   category: String,
 
   checked: {

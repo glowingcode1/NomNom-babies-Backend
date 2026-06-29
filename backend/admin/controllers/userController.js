@@ -56,7 +56,7 @@ const allUsers = async (req, res) => {
     const [users, totalRecords] = await Promise.all([
       User.find(query)
         .select("-password -resetToken -otpInfo")
-        .populate("onboarding.selectedCountries", "name")
+        .populate("onboarding.selectedCountries", "_id name")
         .sort({ createdAt: -1 })
         .skip((page - 1) * Number(limit))
         .limit(Number(limit))
@@ -71,7 +71,7 @@ const allUsers = async (req, res) => {
       user: { $in: userIds },
     })
 
-      .populate("selectedCountries", "name")
+      .populate("selectedCountries", "_id name")
       .lean();
 
     const babiesMap = {};
@@ -136,7 +136,7 @@ const getUserById = async (req, res) => {
 
     const user = await User.findById(id)
       .select("-password -resetToken -otpInfo")
-      .populate("onboarding.selectedCountries", "name")
+      .populate("onboarding.selectedCountries", "_id name")
       .lean();
 
     if (!user) {
@@ -150,7 +150,7 @@ const getUserById = async (req, res) => {
     const babies = await Baby.find({
       user: user._id,
     })
-      .populate("selectedCountries", "name")
+      .populate("selectedCountries", "_id name")
       .lean();
 
     return sendResponse({
@@ -610,7 +610,7 @@ const getUserProfile = async (req, res, next, fieldsToPopulate = []) => {
 
     let query = User.findById(currentUser._id).populate(
       "onboarding.selectedCountries",
-      "name signatureFoods",
+      "_id name signatureFoods",
     );
 
     // Build the dynamic population based on the fields requested

@@ -4,11 +4,12 @@ const Nutrition = require("@models/Nutrition");
 const FeedingLog = require("@models/FeedingLog");
 const FeedingSchedule = require("@models/FeedingSchedule");
 const FoodIntroduction = require("@models/FoodIntroduction");
+const moment = require("moment");
 
 const { User } = require("@models/UserModel");
 const { sendResponse } = require("@utils/responseUtil");
 const FoodTracker = require("@models/FoodTracker");
-const { getBabyInfo } = require("@utils/babyUtil");
+const { getBabyInfo, babyPopulate } = require("@utils/babyUtil");
 
 const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -28,9 +29,7 @@ const getHome = async (req, res) => {
       });
     }
 
-    const baby = await Baby.findById(user.activeBaby)
-      .populate("babyStage", "_id title")
-      .populate("selectedCountries", "_id name");
+    const baby = await Baby.findById(user.activeBaby).populate(babyPopulate);
 
     if (!baby) {
       return sendResponse({
@@ -50,12 +49,9 @@ const getHome = async (req, res) => {
       weeklyFocus,
       foodTracker,
     ] = await Promise.all([
-      FeedingSchedule.findOne({
+      FeedingSchedule.find({
         baby: baby._id,
-      }).populate({
-        path: "weekSchedules.slots.recipe",
-        populate: [{ path: "country" }, { path: "babyStage" }],
-      }),
+      }).sort({ date: 1, time: 1 }),
 
       FeedingLog.find({
         baby: baby._id,
@@ -72,7 +68,7 @@ const getHome = async (req, res) => {
         country: {
           $in: baby.selectedCountries.map((c) => c._id),
         },
-        stage: baby.babyStage?._id,
+        babyStage: baby.babyStage?._id,
         status: "published",
         isActive: true,
       })
@@ -96,26 +92,10 @@ const getHome = async (req, res) => {
       todayLogs.map((log) => String(log.slotId)),
     );
 
-    let todaySchedule = feedingSchedule?.weekSchedules?.find(
-      (day) => day.date === today,
-    );
-
-    // If today doesn't exist in schedule,
-    // take nearest upcoming schedule day
-    if (!todaySchedule) {
-      todaySchedule = feedingSchedule?.weekSchedules
-        ?.filter((day) => day.date >= today)
-        ?.sort((a, b) => a.date.localeCompare(b.date))[0];
-    }
-
-    // If all schedule dates are in the past,
-    // take first available day
-    if (!todaySchedule) {
-      todaySchedule = feedingSchedule?.weekSchedules?.[0];
-    }
+    const todaySchedule = feedingSchedule.filter((item) => item.date === today);
 
     const recommendedMeals =
-      todaySchedule?.slots?.map((slot) => ({
+      todaySchedule.map((slot) => ({
         id: slot._id,
         type: slot.type,
         title: slot.title,
@@ -124,13 +104,45 @@ const getHome = async (req, res) => {
         completed: completedSlotIds.has(String(slot._id)),
       })) || [];
 
-    const incompleteSlots =
-      todaySchedule?.slots?.filter(
-        (slot) => !completedSlotIds.has(String(slot._id)),
-      ) || [];
-
     const nextMeal =
-      incompleteSlots.sort((a, b) => a.time.localeCompare(b.time))[0] || null;
+      todaySchedule
+        .filter((slot) => !completedSlotIds.has(String(slot._id)))
+        .sort(
+          (a, b) => moment(a.time, "hh:mm A") - moment(b.time, "hh:mm A"),
+        )[0] || null;
+
+    const groupedSchedules = {};
+
+    feedingSchedule.forEach((slot) => {
+      if (!groupedSchedules[slot.date]) {
+        groupedSchedules[slot.date] = [];
+      }
+
+      groupedSchedules[slot.date].push(slot);
+    });
+
+    const weeklyJourney = Object.keys(groupedSchedules)
+      .sort()
+      .map((date, index) => {
+        const slots = groupedSchedules[date];
+
+        const completedSlots = slots.filter((slot) =>
+          allLogs.some(
+            (log) =>
+              String(log.slotId) === String(slot._id) && log.date === date,
+          ),
+        ).length;
+
+        const jsDay = new Date(date).getDay();
+
+        return {
+          dayName: dayNames[jsDay === 0 ? 6 : jsDay - 1],
+          date,
+          totalSlots: slots.length,
+          completedSlots,
+          completed: slots.length > 0 && completedSlots === slots.length,
+        };
+      });
 
     return sendResponse({
       res,
@@ -141,27 +153,7 @@ const getHome = async (req, res) => {
 
         recommendedToday: recommendedMeals,
 
-        weeklyJourney:
-          feedingSchedule?.weekSchedules?.map((day) => {
-            const totalSlots = day.slots.length;
-
-            const completedSlots = day.slots.filter((slot) =>
-              allLogs.some(
-                (log) =>
-                  String(log.slotId) === String(slot._id) &&
-                  log.date === day.date,
-              ),
-            ).length;
-
-            return {
-              dayNumber: day.dayNumber,
-              dayName: dayNames[day.dayNumber - 1],
-              date: day.date,
-              totalSlots,
-              completedSlots,
-              completed: totalSlots > 0 && completedSlots === totalSlots,
-            };
-          }) || [],
+        weeklyJourney,
 
         customCulturalPicks: culturalRecipes.map((recipe) => ({
           id: recipe._id,
@@ -189,7 +181,14 @@ const getHome = async (req, res) => {
             }
           : null,
 
-        nextMeal,
+        nextMeal: nextMeal ? {
+          id: nextMeal._id,
+          type: nextMeal.type,
+          title: nextMeal.title,
+          description: nextMeal.description,
+          time: nextMeal.time,
+          isOptional: nextMeal.isOptional,
+        } : null,
 
         downloads: {
           enabled: true,

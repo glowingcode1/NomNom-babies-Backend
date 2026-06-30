@@ -1,6 +1,11 @@
 const FeedingSchedule = require("@models/FeedingSchedule");
 const FeedingLog = require("@models/FeedingLog");
-const { sendResponse, validateParams } = require("@utils/responseUtil");
+const {
+  sendResponse,
+  validateParams,
+  parsePaginationParams,
+  generateMeta,
+} = require("@utils/responseUtil");
 const Baby = require("@models/Baby");
 const mongoose = require("mongoose");
 const { User } = require("@models/UserModel");
@@ -8,81 +13,70 @@ const { User } = require("@models/UserModel");
 // Get feeding schedule for active baby on a given date
 const getFeedingSchedule = async (req, res) => {
   try {
-    const { babyId, date } = req.query;
-    if (!babyId || !date) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "baby_id_and_date_required",
-      });
-    }
+    if (!validateParams(req, res, { queryParams: ["date"] })) return;
 
-    const schedule = await FeedingSchedule.findOne({
-      baby: babyId,
-      user: req.user._id,
-    }).populate("weekSchedules.slots.recipe", "_id title image prepTime");
+    const { date } = req.query;
+    const user = await User.findById(req.user._id);
 
-    if (!schedule) {
+    if (!user?.activeBaby) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "feeding_schedule_not_found",
+        translationKey: "baby_not_found",
       });
     }
 
-    const logs = await FeedingLog.find({
-      baby: babyId,
+    const { page, limit, skip } = parsePaginationParams(req);
+
+    const totalRecords = await FeedingSchedule.countDocuments({
+      baby: user.activeBaby,
       user: req.user._id,
       date,
     });
 
-    const completedSlotIds = new Set(logs.map((l) => String(l.slotId)));
+    const schedules = await FeedingSchedule.find({
+      baby: user.activeBaby,
+      user: req.user._id,
+      date,
+    })
+      .sort({ time: 1 })
+      .skip(skip)
+      .limit(limit);
 
-    const selectedDay = schedule.weekSchedules.find((day) => day.date === date);
-
-    if (!selectedDay) {
+    if (!schedules.length) {
       return sendResponse({
         res,
         statusCode: 200,
         translationKey: "data_fetched_successfully",
-        data: {
-          scheduleId: schedule._id,
-          slots: [],
-          progress: {
-            completed: 0,
-            total: 0,
-          },
-        },
+        data: [],
+        meta: generateMeta(totalRecords, page, limit),
       });
     }
 
-    const slots = selectedDay.slots.map((slot) => ({
-      _id: slot._id,
-      type: slot.type,
-      time: slot.time,
-      title: slot.title,
-      description: slot.description,
-      amount: slot.amount,
-      recipe: slot.recipe,
-      completed: completedSlotIds.has(String(slot._id)),
-    }));
+    const logs = await FeedingLog.find({
+      baby: user.activeBaby,
+      user: req.user._id,
+      date,
+    });
 
-    const completedCount = slots.filter((s) => s.completed).length;
+    const completedIds = new Set(logs.map((log) => String(log.slotId)));
+
+    const slots = schedules.map((item) => ({
+      _id: item._id,
+      type: item.type,
+      title: item.title,
+      description: item.description,
+      time: item.time,
+      isOptional: item.isOptional,
+      completed: completedIds.has(String(item._id)),
+    }));
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
-      data: {
-        scheduleId: schedule._id,
-
-        slots,
-
-        progress: {
-          completed: completedCount,
-          total: slots.length,
-        },
-      },
+      data: slots,
+      meta: generateMeta(totalRecords, page, limit),
     });
   } catch (error) {
     return sendResponse({
@@ -97,29 +91,11 @@ const getFeedingSchedule = async (req, res) => {
 const getScheduleSlotDetail = async (req, res) => {
   try {
     const { slotId } = req.params;
-    const schedule = await FeedingSchedule.aggregate([
-      {
-        $match: {
-          user: req.user._id,
-        },
-      },
-      {
-        $unwind: "$weekSchedules",
-      },
-      {
-        $unwind: "$weekSchedules.slots",
-      },
-      {
-        $match: {
-          "weekSchedules.slots._id": new mongoose.Types.ObjectId(slotId),
-        },
-      },
-      {
-        $replaceRoot: {
-          newRoot: "$weekSchedules.slots",
-        },
-      },
-    ]);
+    const schedule = await FeedingSchedule.findOne({
+      user: req.user._id,
+
+      "slots._id": slotId,
+    });
 
     if (!schedule.length) {
       return sendResponse({
@@ -129,8 +105,7 @@ const getScheduleSlotDetail = async (req, res) => {
       });
     }
 
-    const slot = schedule?.[0]?.slot;
-
+    const slot = schedule.slots.id(slotId);
     if (!slot) {
       return sendResponse({
         res,
@@ -174,11 +149,11 @@ const removeScheduleSlot = async (req, res) => {
     await FeedingSchedule.updateOne(
       {
         user: req.user._id,
-        "weekSchedules.slots._id": slotId,
       },
+
       {
         $pull: {
-          "weekSchedules.$[].slots": {
+          slots: {
             _id: slotId,
           },
         },
@@ -205,36 +180,51 @@ const removeScheduleSlot = async (req, res) => {
 // Create feeding schedule for a baby
 const createFeedingSchedule = async (req, res) => {
   try {
-    if (!validateParams(req, res, { rawData: ["babyId", "weekSchedules"] }))
+    if (
+      !validateParams(req, res, {
+        rawData: ["type", "title", "time", "description"],
+      })
+    )
       return;
 
-    const { babyId, weekSchedules } = req.body;
+    const { type, title, time, description } = req.body;
 
-    // Only one schedule per baby
-    const existing = await FeedingSchedule.findOne({
-      baby: babyId,
-      user: req.user._id,
-    });
+    const user = await User.findById(req.user._id);
 
-    if (existing) {
+    if (!user?.activeBaby) {
       return sendResponse({
         res,
-        statusCode: 409,
-        translationKey: "feeding_schedule_already_exists",
+        statusCode: 404,
+        translationKey: "baby_not_found",
       });
     }
+    const today = new Date().toISOString().split("T")[0];
 
     const schedule = await FeedingSchedule.create({
-      baby: babyId,
+      baby: user.activeBaby,
       user: req.user._id,
-      weekSchedules,
+      type,
+      title,
+      time,
+      description,
+      date: today,
     });
+
+    const scheduleResponse = {
+      _id: schedule._id,
+      type: schedule.type,
+      title: schedule.title,
+      description: schedule.description,
+      time: schedule.time,
+      isOptional: schedule.isOptional,
+      completed: false,
+    };
 
     return sendResponse({
       res,
       statusCode: 201,
       translationKey: "feeding_schedule_created_success",
-      data: schedule,
+      data: scheduleResponse,
     });
   } catch (error) {
     return sendResponse({
@@ -254,7 +244,9 @@ const updateFeedingSchedule = async (req, res) => {
     )
       return;
 
-    const { weekSchedules } = req.body;
+    const { slots } = req.body;
+
+    schedule.slots = slots;
 
     const schedule = await FeedingSchedule.findOne({
       _id: req.params.id,
@@ -334,18 +326,30 @@ const getUserFeedingSchedules = async (req, res) => {
     )
       return;
 
-    const schedules = await FeedingSchedule.find({
+    const { page, limit, skip } = parsePaginationParams(req);
+
+    const query = {
       user: req.params.userId,
-    })
+    };
+
+    const totalRecords = await FeedingSchedule.countDocuments(query);
+
+    const schedules = await FeedingSchedule.find(query)
       .populate("baby", "_id name")
-      .populate("weekSchedules.slots.recipe", "_id title image prepTime")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: schedules,
+      meta: generateMeta({
+        page,
+        limit,
+        totalRecords,
+      }),
     });
   } catch (error) {
     return sendResponse({
@@ -367,12 +371,20 @@ const getUserBabyFeedingSchedule = async (req, res) => {
     )
       return;
 
-    const schedule = await FeedingSchedule.findOne({
+    const { page, limit, skip } = parsePaginationParams(req);
+
+    const query = {
       user: req.params.userId,
       baby: req.params.babyId,
-    })
+    };
+
+    const totalRecords = await FeedingSchedule.countDocuments(query);
+
+    const schedule = await FeedingSchedule.find(query)
       .populate("baby", "_id name")
-      .populate("weekSchedules.slots.recipe", "_id title image prepTime");
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     if (!schedule) {
       return sendResponse({
@@ -387,6 +399,11 @@ const getUserBabyFeedingSchedule = async (req, res) => {
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: schedule,
+      meta: generateMeta({
+        page,
+        limit,
+        totalRecords,
+      }),
     });
   } catch (error) {
     return sendResponse({
@@ -401,49 +418,101 @@ const getUserBabyFeedingSchedule = async (req, res) => {
 // Mark / unmark a slot as completed for a given date
 const toggleSlotCompletion = async (req, res) => {
   try {
-    if (!validateParams(req, res, { rawData: ["babyId", "slotId", "date"] }))
+    if (
+      !validateParams(req, res, {
+        pathParams: ["slotId"],
+        objectIdFields: ["slotId"],
+      })
+    )
       return;
 
-    const { babyId, slotId, date } = req.body;
+    const { slotId } = req.params;
 
-    const existing = await FeedingLog.findOne({
-      baby: babyId,
-      user: req.user._id,
-      slotId,
-      date,
-    });
+    const user = await User.findById(req.user._id);
 
-    if (existing) {
-      // Toggle: if already logged, remove it (unmark)
-      await existing.deleteOne();
+    if (!user?.activeBaby) {
       return sendResponse({
         res,
-        statusCode: 200,
-        translationKey: "feeding_slot_unmarked",
-        data: { completed: false },
+        statusCode: 404,
+        translationKey: "baby_not_found",
       });
     }
 
-    // Mark as completed
-    await FeedingLog.create({
-      baby: babyId,
+    const slot = await FeedingSchedule.findOne({
+      _id: slotId,
+      baby: user.activeBaby,
       user: req.user._id,
+    });
+
+    if (!slot) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "feeding_slot_not_found",
+      });
+    }
+
+    const existing = await FeedingLog.findOne({
+      baby: user.activeBaby,
+
+      user: req.user._id,
+
       slotId,
-      date,
+
+      date: slot.date,
+    });
+
+    if (existing) {
+      await existing.deleteOne();
+
+      return sendResponse({
+        res,
+
+        statusCode: 200,
+
+        translationKey: "feeding_slot_unmarked",
+
+        data: {
+          slotId,
+
+          completed: false,
+        },
+      });
+    }
+
+    await FeedingLog.create({
+      baby: user.activeBaby,
+
+      user: req.user._id,
+
+      slotId,
+
+      date: slot.date,
+
       completed: true,
     });
 
     return sendResponse({
       res,
-      statusCode: 201,
+
+      statusCode: 200,
+
       translationKey: "feeding_slot_completed",
-      data: { completed: true },
+
+      data: {
+        slotId,
+
+        completed: true,
+      },
     });
   } catch (error) {
     return sendResponse({
       res,
+
       statusCode: 500,
+
       translationKey: "internal_server",
+
       error: error.message,
     });
   }

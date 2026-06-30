@@ -1,55 +1,5 @@
 const mongoose = require("mongoose");
 
-const feedingSlotSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ["milk", "meal"],
-    required: true,
-  },
-  time: {
-    type: String,
-    required: true, // e.g. "07:00 AM"
-  },
-  title: {
-    type: String,
-    required: true, // e.g. "Morning Feed"
-  },
-  description: {
-    type: String,
-    default: "", // e.g. "Breast Milk / Formula • Light morning feeding"
-  },
-
-  amount: {
-    type: String,
-    default: "",
-  },
-  recipe: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Recipe",
-    default: null,
-  },
-  isOptional: {
-    type: Boolean,
-    default: false,
-  },
-});
-
-const dayScheduleSchema = new mongoose.Schema({
-  dayNumber: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 7,
-  },
-
-  date: {
-    type: String,
-    required: true,
-  },
-
-  slots: [feedingSlotSchema],
-});
-
 const feedingScheduleSchema = new mongoose.Schema(
   {
     baby: {
@@ -62,7 +12,31 @@ const feedingScheduleSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
-    weekSchedules: [dayScheduleSchema],
+    date: {
+      type: String,
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: ["milk", "meal"],
+      required: true,
+    },
+    time: {
+      type: String,
+      required: true, // e.g. "07:00 AM"
+    },
+    title: {
+      type: String,
+      required: true, // e.g. "Morning Feed"
+    },
+    description: {
+      type: String,
+      default: "", // e.g. "Breast Milk / Formula • Light morning feeding"
+    },
+    isOptional: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true },
 );

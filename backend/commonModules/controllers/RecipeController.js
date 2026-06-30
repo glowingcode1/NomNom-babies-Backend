@@ -22,20 +22,18 @@ const getRecipes = async (req, res) => {
     if (stageId) query.babyStage = stageId;
     if (search) query.title = { $regex: search, $options: "i" };
 
-    const [recipes, total] = await Promise.all([
+    const [recipes, totalRecords] = await Promise.all([
       Recipe.find(query)
         .populate("country", "_id name")
         .populate("babyStage", "_id title")
-        .select(
-          "title image prepTime mealType nutritionTags country babyStage",
-        )
+        .select("title image prepTime mealType nutritionTags country babyStage")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit),
       Recipe.countDocuments(query),
     ]);
 
-    const meta = generateMeta(page, limit, total);
+    const meta = generateMeta(page, limit, totalRecords);
 
     return sendResponse({
       res,
@@ -82,7 +80,61 @@ const getRecipeById = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
-      data: recipe,
+      data: {
+        recipeId: recipe._id,
+
+        title: recipe.title,
+
+        image: recipe.image,
+
+        prepTime: `${recipe.prepTime} mins`,
+
+        mealType: recipe.mealType,
+
+        stage: recipe.babyStage
+          ? {
+              _id: recipe.babyStage._id,
+              title: recipe.babyStage.title,
+            }
+          : null,
+
+        country: recipe.country
+          ? {
+              _id: recipe.country._id,
+              name: recipe.country.name,
+            }
+          : null,
+
+        nutritionTags: recipe.nutritionTags,
+
+        ingredients: recipe.ingredients.map((item) => ({
+          name: item.name,
+
+          quantity: item.quantity,
+
+          icon: item.icon,
+        })),
+
+        instructions: recipe.method.map((step) => ({
+          step: step.step,
+
+          title: `Step ${step.step}`,
+
+          description: step.instruction,
+        })),
+
+        notes: recipe.notes,
+
+        acceptanceLabel: recipe.acceptanceLabel,
+
+        actions: {
+          nutritionFacts: true,
+
+          downloadPdf: true,
+
+          addToGroceryList: true,
+        },
+      },
     });
   } catch (error) {
     return sendResponse({
@@ -109,7 +161,7 @@ const adminGetRecipes = async (req, res) => {
     if (countryId) query.country = countryId;
     if (stageId) query.babyStage = stageId;
 
-    const [recipes, total] = await Promise.all([
+    const [recipes, totalRecords] = await Promise.all([
       Recipe.find(query)
         .populate("country", "_id name")
         .populate("babyStage", "_id title")
@@ -119,7 +171,7 @@ const adminGetRecipes = async (req, res) => {
       Recipe.countDocuments(query),
     ]);
 
-    const meta = generateMeta(page, limit, total);
+    const meta = generateMeta(page, limit, totalRecords);
 
     return sendResponse({
       res,
@@ -173,9 +225,7 @@ const getUserRecipes = async (req, res) => {
     })
       .populate("country", "_id name")
       .populate("babyStage", "_id title")
-      .select(
-        "title image prepTime mealType nutritionTags country babyStage",
-      )
+      .select("title image prepTime mealType nutritionTags country babyStage")
       .sort({ createdAt: -1 });
 
     return sendResponse({
@@ -471,7 +521,7 @@ const getBabyRecipes = async (req, res) => {
       country: { $in: baby.selectedCountries },
     };
 
-    const [recipes, total] = await Promise.all([
+    const [recipes, totalRecords] = await Promise.all([
       Recipe.find(query)
         .populate("country", "_id name")
         .populate("babyStage", "_id title")
@@ -482,7 +532,7 @@ const getBabyRecipes = async (req, res) => {
       Recipe.countDocuments(query),
     ]);
 
-    const meta = generateMeta(page, limit, total);
+    const meta = generateMeta(page, limit, totalRecords);
 
     return sendResponse({
       res,

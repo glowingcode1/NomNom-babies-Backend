@@ -2,7 +2,11 @@ const GroceryList = require("@models/GroceryList");
 const Recipe = require("@models/Recipe");
 const Baby = require("@models/Baby");
 
-const { sendResponse, validateParams } = require("@utils/responseUtil");
+const {
+  sendResponse,
+  parsePaginationParams,
+  generateMeta,
+} = require("@utils/responseUtil");
 
 // Add recipe ingredients to grocery list
 const addRecipeToGroceryList = async (req, res) => {
@@ -74,85 +78,85 @@ const addRecipeToGroceryList = async (req, res) => {
 
 // Get grocery list
 const getGroceryList = async (req, res) => {
-  const groceryList = await GroceryList.findOne({
-    user: req.user._id,
-  }).populate("recipes.recipe", "_id title image");
+  try {
+    const { page, limit, skip } = parsePaginationParams(req);
 
-  if (!groceryList) {
-    return sendResponse({
-      res,
+    const groceryList = await GroceryList.findOne({
+      user: req.user._id,
+    }).populate("recipes.recipe", "_id title image");
 
-      statusCode: 200,
-
-      translationKey: "data_fetched_successfully",
-
-      data: {
-        recipesIncluded: [],
-        groceryChecklist: [],
-        ingredientCategories: [],
-      },
-    });
-  }
-
-  const recipesIncluded = groceryList.recipes.map((r) => ({
-    recipeId: r.recipe._id,
-
-    title: r.recipe.title,
-
-    image: r.recipe.image,
-  }));
-
-  const groceryChecklist = [];
-
-  const categoriesMap = {};
-
-  groceryList.recipes.forEach((recipe) => {
-    recipe.ingredients.forEach((ingredient) => {
-      groceryChecklist.push({
-        _id: ingredient._id,
-
-        name: ingredient.name,
-
-        icon: ingredient.icon,
-
-        quantity: ingredient.quantity,
-
-        checked: ingredient.checked,
+    if (!groceryList) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "data_fetched_successfully",
+        data: {
+          recipesIncluded: [],
+          groceryChecklist: [],
+          ingredientCategories: [],
+        },
+        meta: generateMeta(0, page, limit),
       });
+    }
 
-      if (ingredient.category) {
-        if (!categoriesMap[ingredient.category]) {
-          categoriesMap[ingredient.category] = [];
+    const recipesIncluded = groceryList.recipes.map((r) => ({
+      recipeId: r.recipe._id,
+      title: r.recipe.title,
+      image: r.recipe.image,
+    }));
+
+    const groceryChecklist = [];
+    const categoriesMap = {};
+
+    groceryList.recipes.forEach((recipe) => {
+      recipe.ingredients.forEach((ingredient) => {
+        groceryChecklist.push({
+          _id: ingredient._id,
+          name: ingredient.name,
+          icon: ingredient.icon,
+          quantity: ingredient.quantity,
+          checked: ingredient.checked,
+          category: ingredient.category,
+        });
+
+        if (ingredient.category) {
+          if (!categoriesMap[ingredient.category]) {
+            categoriesMap[ingredient.category] = [];
+          }
+
+          categoriesMap[ingredient.category].push(ingredient.name);
         }
-
-        categoriesMap[ingredient.category].push(ingredient.name);
-      }
+      });
     });
-  });
 
-  const ingredientCategories = Object.keys(categoriesMap)
+    const totalRecords = groceryChecklist.length;
 
-    .map((category) => ({
+    const paginatedChecklist = groceryChecklist.slice(skip, skip + limit);
+
+    const ingredientCategories = Object.keys(categoriesMap).map((category) => ({
       category,
-
       items: categoriesMap[category],
     }));
 
-  return sendResponse({
-    res,
-
-    statusCode: 200,
-
-    translationKey: "data_fetched_successfully",
-
-    data: {
-      recipesIncluded,
-
-      groceryChecklist,
-
-      ingredientCategories,
-    },
-  });
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: {
+        recipesIncluded,
+        groceryChecklist: paginatedChecklist,
+        ingredientCategories,
+      },
+      meta: generateMeta(totalRecords, page, limit),
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
 };
 
 const updateIngredientStatus = async (req, res) => {

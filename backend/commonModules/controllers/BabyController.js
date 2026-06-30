@@ -8,11 +8,7 @@ const {
   parsePaginationParams,
   generateMeta,
 } = require("@utils/responseUtil");
-const FeedingSchedule = require("@models/FeedingSchedule");
-const FeedingLog = require("@models/FeedingLog");
-const Recipe = require("@models/Recipe");
-const FoodTracker = require("@models/FoodTracker");
-const { getBabyInfo } = require("@utils/babyUtil");
+const { getBabyInfo, babyPopulate } = require("@utils/babyUtil");
 
 // Create a new baby profile
 const createBaby = async (req, res) => {
@@ -115,8 +111,7 @@ const getBabies = async (req, res) => {
     };
     const [babies, totalRecords] = await Promise.all([
       Baby.find(query)
-        .populate("babyStage", "_id title features")
-        .populate("selectedCountries", "_id name signatureFoods")
+        .populate(babyPopulate)
         .sort({ createdAt: 1 })
         .skip((page - 1) * limit)
         .limit(limit),
@@ -166,8 +161,7 @@ const getUserBabies = async (req, res) => {
 
     const [babies, totalRecords] = await Promise.all([
       Baby.find(query)
-        .populate("babyStage", "_id title features")
-        .populate("selectedCountries", "_id name signatureFoods")
+        .populate(babyPopulate)
         .sort({ createdAt: 1 })
         .skip((page - 1) * limit)
         .limit(limit),
@@ -206,9 +200,7 @@ const getBabyById = async (req, res) => {
       _id: req.params.id,
       user: req.user._id,
       isActive: true,
-    })
-      .populate("babyStage", "_id title features")
-      .populate("selectedCountries", "_id name signatureFoods");
+    }).populate(babyPopulate);
 
     if (!baby) {
       return sendResponse({
@@ -302,10 +294,7 @@ const updateBaby = async (req, res) => {
     }
 
     await baby.save();
-    await baby.populate([
-      { path: "babyStage", select: "_id title features" },
-      { path: "selectedCountries", select: "_id name signatureFoods" },
-    ]);
+    await baby.populate(babyPopulate);
 
     return sendResponse({
       res,
@@ -398,63 +387,7 @@ const switchActiveBaby = async (req, res) => {
 
     await User.findByIdAndUpdate(req.user._id, { activeBaby: baby._id });
 
-    await baby.populate([
-      {
-        path: "babyStage",
-        select: "_id title",
-      },
-      {
-        path: "selectedCountries",
-        select: "_id name",
-      },
-    ]);
-
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-    const feedingSchedule = await FeedingSchedule.findOne({
-      baby: baby._id,
-      user: req.user._id,
-    }).populate("weekSchedules.slots.recipe", "title image prepTime");
-
-    const todaySchedule = feedingSchedule?.weekSchedules?.find(
-      (day) => day.date === today,
-    );
-
-    const allLogs = await FeedingLog.find({
-      baby: baby._id,
-      user: req.user._id,
-    });
-
-    const culturalRecipes = await Recipe.find({
-      country: {
-        $in: baby.selectedCountries.map((c) => c._id),
-      },
-      stage: baby.babyStage?._id,
-      status: "published",
-      isActive: true,
-    });
-
-    const foodTracker = await FoodTracker.find({
-      baby: baby._id,
-      user: userId,
-    });
-
-    const completedSlotIds = new Set(
-      allLogs
-        .filter((log) => log.date === today)
-        .map((log) => String(log.slotId)),
-    );
-
-    const recommendedMeals =
-      todaySchedule?.slots?.map((slot) => ({
-        id: slot._id,
-        type: slot.type,
-        title: slot.title,
-        description: slot.description,
-        time: slot.time,
-        completed: completedSlotIds.has(String(slot._id)),
-      })) || [];
-
+    await baby.populate(babyPopulate);
     return sendResponse({
       res,
       statusCode: 200,

@@ -12,6 +12,7 @@ const {
 const { createOrSkipDevice, Devices } = require("@models/Devices");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
+const { babyPopulate, getBabyInfo } = require("@utils/babyUtil");
 
 const normalizeRole = (role) => {
   if (!role) {
@@ -312,39 +313,12 @@ const login = async (req, res) => {
     let activeBaby = null;
 
     if (user.activeBaby) {
-      activeBaby = await Baby.findById(user.activeBaby)
-        .populate("babyStage", "_id title")
-        .populate("selectedCountries", "_id name");
+      activeBaby = await Baby.findById(user.activeBaby).populate(babyPopulate);
     }
 
     const response = formatUserResponse(user, token, [], ["resetToken"]);
 
-    response.babyInfo = activeBaby
-      ? {
-          _id: activeBaby._id,
-
-          name: activeBaby.name,
-
-          profileIcon: activeBaby.profileIcon || "",
-
-          dob: activeBaby.dob || null,
-
-          gender: activeBaby.gender || null,
-
-          babyStage: activeBaby.babyStage
-            ? {
-                _id: activeBaby.babyStage._id,
-                title: activeBaby.babyStage.title,
-              }
-            : null,
-
-          selectedCountries:
-            activeBaby.selectedCountries?.map((country) => ({
-              _id: country._id,
-              name: country.name,
-            })) || [],
-        }
-      : null;
+    response.babyInfo = activeBaby ? getBabyInfo(activeBaby) : null;
 
     response.hasBaby = !!activeBaby;
 
@@ -819,8 +793,15 @@ const deleteAccount = async (req, res) => {
 };
 
 const socialAuth = async (req, res) => {
-  const { provider, socialId, email, name, deviceId, deviceType, timezone } =
-    req.body;
+  const {
+    provider,
+    socialId,
+    email,
+    name,
+    deviceId,
+    deviceType,
+    timezone,
+  } = req.body;
   // const session = await mongoose.startSession();
   // session.startTransaction();
 
@@ -878,15 +859,32 @@ const socialAuth = async (req, res) => {
       existingUser.provider = provider; // Update the provider field to reflect the latest social login
       existingUser.timezone = timezone; // Update the timezone to reflect the user's current login
       existingUser.accountState.status = "active"; // Ensure the account is active
+      existingUser.name = name;
+      existingUser.parentCaregiverName = name;
 
       // await existingUser.save({ session });
       await existingUser.save();
+
+      await createOrSkipDevice(existingUser._id, deviceId, deviceType);
       const token = existingUser.generateAuthToken();
 
-      const response = formatUserResponse(existingUser, token);
+      let activeBaby = null;
 
-      // Save device information
-      createOrSkipDevice(existingUser._id, deviceId, deviceType);
+      if (existingUser.activeBaby) {
+        activeBaby = await Baby.findById(existingUser.activeBaby).populate(
+          babyPopulate,
+        );
+      }
+
+      const response = formatUserResponse(
+        existingUser,
+        token,
+        [],
+        ["resetToken"],
+      );
+
+      response.babyInfo = activeBaby ? getBabyInfo(activeBaby) : null;
+      response.hasBaby = !!activeBaby;
 
       // await session.commitTransaction();
       // session.endSession();
@@ -902,6 +900,7 @@ const socialAuth = async (req, res) => {
       const newUser = new User({
         email,
         name,
+        parentCaregiverName: name,
         provider, // Set the initial provider
         [`${provider}Id`]: socialId, // Dynamically store the provider ID
         timezone,
@@ -917,13 +916,15 @@ const socialAuth = async (req, res) => {
       // await newUser.save({ session });
       await newUser.save();
 
+      await createOrSkipDevice(newUser._id, deviceId, deviceType);
       // Generate a token for the new user
       const token = newUser.generateAuthToken();
 
-      const response = formatUserResponse(newUser, token);
+      const response = formatUserResponse(newUser, token, [], ["resetToken"]);
 
-      // Save device information
-      createOrSkipDevice(newUser._id, deviceId, deviceType);
+      // New user has no active baby initially
+      response.babyInfo = null;
+      response.hasBaby = false;
 
       // await session.commitTransaction();
       // session.endSession();

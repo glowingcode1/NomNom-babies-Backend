@@ -2,8 +2,12 @@ const Baby = require("@models/Baby");
 const FeedingSchedule = require("@models/FeedingSchedule");
 const FeedingLog = require("@models/FeedingLog");
 const { User } = require("@models/UserModel");
-const { sendResponse } = require("@utils/responseUtil");
-const { getBabyInfo } = require("@utils/babyUtil");
+const {
+  sendResponse,
+  parsePaginationParams,
+  generateMeta,
+} = require("@utils/responseUtil");
+const { getBabyInfo, babyPopulate } = require("@utils/babyUtil");
 
 const getFeedingTimetable = async (req, res) => {
   try {
@@ -21,9 +25,7 @@ const getFeedingTimetable = async (req, res) => {
       });
     }
 
-    const baby = await Baby.findById(user.activeBaby)
-      .populate("babyStage", "_id title")
-      .populate("selectedCountries", "_id name");
+    const baby = await Baby.findById(user.activeBaby).populate(babyPopulate);
 
     if (!baby) {
       return sendResponse({
@@ -33,16 +35,18 @@ const getFeedingTimetable = async (req, res) => {
       });
     }
 
+    const { page, limit, skip } = parsePaginationParams(req);
+
+    const query = {
+      baby: baby._id,
+      user: req.user._id,
+      date: today,
+    };
+
     const today = new Date().toISOString().split("T")[0];
 
-    const [schedule, logs] = await Promise.all([
-      FeedingSchedule.findOne({
-        baby: baby._id,
-        user: req.user._id,
-      }).populate(
-        "weekSchedules.slots.recipe",
-        "_id title image mealType prepTime",
-      ),
+    const [totalRecords, schedule, logs] = await Promise.all([
+      FeedingSchedule.find(query).sort({ time: 1 }).skip(skip).limit(limit),
 
       FeedingLog.find({
         baby: baby._id,
@@ -53,34 +57,15 @@ const getFeedingTimetable = async (req, res) => {
 
     const completedIds = new Set(logs.map((log) => String(log.slotId)));
 
-    const todaySchedule = schedule?.weekSchedules?.find(
-      (day) => day.date === today,
-    );
+    const todaySchedule = schedule.query((item) => item.date === today);
 
     const recommendedToday =
-      todaySchedule?.slots?.map((slot) => ({
-        slotId: slot._id,
-
+      todaySchedule.map((slot) => ({
+        id: slot._id,
         type: slot.type,
-
-        time: slot.time,
-
         title: slot.title,
-
         description: slot.description,
-
-        amount: slot.amount,
-
-        recipe: slot.recipe
-          ? {
-              _id: slot.recipe._id,
-              title: slot.recipe.title,
-              image: slot.recipe.image,
-              mealType: slot.recipe.mealType,
-              prepTime: slot.recipe.prepTime,
-            }
-          : null,
-
+        time: slot.time,
         completed: completedIds.has(String(slot._id)),
       })) || [];
 
@@ -117,6 +102,11 @@ const getFeedingTimetable = async (req, res) => {
           "Observe reactions carefully",
         ],
       },
+      meta: generateMeta({
+        page,
+        limit,
+        totalRecords,
+      }),
     });
   } catch (error) {
     return sendResponse({

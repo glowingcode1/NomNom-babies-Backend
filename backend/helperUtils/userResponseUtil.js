@@ -27,6 +27,7 @@ const formatUserResponse = (
       _id: userObject._id,
       profileIcon: pIcon,
       name: userObject.name,
+      parentName: userObject.parentCaregiverName,
       email: userObject.email,
       phoneNumber: userObject.phoneNumber,
       language: userObject.language,

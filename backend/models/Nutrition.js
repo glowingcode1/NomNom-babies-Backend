@@ -1,39 +1,87 @@
 const mongoose = require("mongoose");
 
+const nutrientSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    benefit: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  { _id: false },
+);
+
 const nutritionSchema = new mongoose.Schema(
   {
     recipe: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Recipe",
-      required: true,
-      unique: true,
+      default: null,
       index: true,
     },
-    nutrients: [
-      {
-        name: { type: String, required: true, trim: true }, // "Vitamin A", "Iron", etc.
-        benefit: { type: String, required: true, trim: true }, // description shown under name
-      },
-    ],
+
+    babyStage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "BabyStage",
+      default: null,
+      index: true,
+    },
+
+    nutrients: {
+      type: [nutrientSchema],
+      default: [],
+    },
+
     feedingInsight: {
       type: String,
-      trim: true,
       default: "",
     },
+
     allergyReminder: {
       type: String,
-      trim: true,
       default: "",
     },
+
     isWeeklyFocus: {
       type: Boolean,
       default: false,
     },
-    isActive: { type: Boolean, default: true },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+  },
 );
 
-const Nutrition =
+nutritionSchema.index(
+  { recipe: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      recipe: { $exists: true },
+    },
+  },
+);
+
+nutritionSchema.index(
+  { babyStage: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      babyStage: { $exists: true },
+    },
+  },
+);
+
+module.exports =
   mongoose.models.Nutrition || mongoose.model("Nutrition", nutritionSchema);
-module.exports = Nutrition;

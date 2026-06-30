@@ -1,3 +1,14 @@
+const babyPopulate = [
+  {
+    path: "babyStage",
+    select: "_id title features",
+  },
+  {
+    path: "selectedCountries",
+    select: "_id name signatureFoods",
+  },
+];
+
 const getBabyInfo = (baby) => {
   if (!baby) return null;
 
@@ -25,4 +36,5 @@ const getBabyInfo = (baby) => {
 
 module.exports = {
   getBabyInfo,
+  babyPopulate,
 };

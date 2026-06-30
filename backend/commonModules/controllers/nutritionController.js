@@ -1,5 +1,7 @@
+const Baby = require("@models/Baby");
 const Nutrition = require("@models/Nutrition");
 const Recipe = require("@models/Recipe");
+const { User } = require("@models/UserModel");
 const {
   sendResponse,
   validateParams,
@@ -37,7 +39,13 @@ const getNutritionByRecipe = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
-      data: nutrition,
+      data: {
+        nutrients: nutrition.nutrients,
+
+        feedingInsight: nutrition.feedingInsight,
+
+        allergyReminder: nutrition.allergyReminder,
+      },
     });
   } catch (error) {
     return sendResponse({
@@ -49,11 +57,97 @@ const getNutritionByRecipe = async (req, res) => {
   }
 };
 
+const getNutrition = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const baby = await Baby.findById(user.activeBaby);
+
+    if (!baby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const recipes = await Recipe.find({
+      babyStage: baby.babyStage,
+
+      status: "published",
+
+      isActive: true,
+    }).select("_id");
+
+    const recipeIds = recipes.map((r) => r._id);
+
+    const nutritions = await Nutrition.find({
+      recipe: {
+        $in: recipeIds,
+      },
+
+      isActive: true,
+    });
+
+    const nutrientMap = new Map();
+
+    nutritions.forEach((nutrition) => {
+      nutrition.nutrients.forEach((nutrient) => {
+        if (!nutrientMap.has(nutrient.name)) {
+          nutrientMap.set(
+            nutrient.name,
+
+            {
+              name: nutrient.name,
+
+              benefit: nutrient.benefit,
+            },
+          );
+        }
+      });
+    });
+
+    const nutrients = Array.from(nutrientMap.values());
+
+    return sendResponse({
+      res,
+
+      statusCode: 200,
+
+      translationKey: "data_fetched_successfully",
+
+      data: {
+        nutrients,
+
+        feedingInsight: nutritions[0]?.feedingInsight || "",
+      },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+
+      statusCode: 500,
+
+      translationKey: "internal_server",
+
+      error: error.message,
+    });
+  }
+};
+
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 
 // Get all nutrition entries with pagination (admin)
 const adminGetNutritions = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
+  const { page, limit, skip } = parsePaginationParams(req);
 
   try {
     const { search = "", isActive } = req.query;
@@ -67,15 +161,17 @@ const adminGetNutritions = async (req, res) => {
         match: search ? { title: { $regex: search, $options: "i" } } : {},
         select: "title",
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     const filtered = search
       ? allNutritions.filter((n) => n.recipe !== null)
       : allNutritions;
 
-    const total = filtered.length;
+    const totalRecords = filtered.length;
     const paginated = filtered.slice((page - 1) * limit, page * limit);
-    const meta = generateMeta(page, limit, total);
+    const meta = generateMeta(page, limit, totalRecords);
 
     return sendResponse({
       res,
@@ -307,6 +403,7 @@ const deleteNutrition = async (req, res) => {
 
 module.exports = {
   getNutritionByRecipe,
+  getNutrition,
   adminGetNutritions,
   adminGetNutritionById,
   createNutrition,

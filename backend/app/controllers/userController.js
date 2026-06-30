@@ -11,6 +11,7 @@ const { NotificationTypes } = require("@models/Notifications");
 const validator = require("validator");
 const { userCache } = require("@config/nodeCache");
 const Baby = require("@models/Baby");
+const { babyPopulate, getBabyInfo } = require("@utils/babyUtil");
 
 // Block User Function
 const blockUser = async (req, res) => {
@@ -392,38 +393,11 @@ const getUserProfile = async (req, res, next, fieldsToPopulate = []) => {
     let activeBaby = null;
 
     if (user.activeBaby) {
-      activeBaby = await Baby.findById(user.activeBaby)
-        .populate("babyStage", "_id title")
-        .populate("selectedCountries", "_id name");
+      activeBaby = await Baby.findById(user.activeBaby).populate(babyPopulate);
     }
 
     const response = formatUserResponse(user, null, [], ["resetToken"]);
-    response.babyInfo = activeBaby
-      ? {
-          _id: activeBaby._id,
-
-          name: activeBaby.name,
-
-          profileIcon: activeBaby.profileIcon || "",
-
-          dob: activeBaby.dob || null,
-
-          gender: activeBaby.gender || null,
-
-          babyStage: activeBaby.babyStage
-            ? {
-                _id: activeBaby.babyStage._id,
-                title: activeBaby.babyStage.title,
-              }
-            : null,
-
-          selectedCountries:
-            activeBaby.selectedCountries?.map((country) => ({
-              _id: country._id,
-              name: country.name,
-            })) || [],
-        }
-      : null;
+    response.babyInfo = activeBaby ? getBabyInfo(activeBaby) : null;
 
     response.hasBaby = !!activeBaby;
     return sendResponse({
@@ -568,13 +542,38 @@ const updateUserProfile = async (req, res, next) => {
         fullAddress,
       };
     }
-
-    // Save the updated user
     await user.save();
 
     userCache.del(currentUser._id.toString());
 
-    const response = formatUserResponse(user, null, [], ["resetToken"]);
+    let query = User.findById(currentUser._id).populate(
+      "onboarding.selectedCountries",
+      "_id name signatureFoods",
+    );
+
+    // Agar update API mein bhi ye populate chahiye
+    Object.keys(populationFields).forEach((field) => {
+      const populationConfig = populationFields[field];
+      if (populationConfig) {
+        query = query.populate(populationConfig.path, populationConfig.select);
+      }
+    });
+
+    const updatedUser = await query.exec();
+
+    let activeBaby = null;
+
+    if (updatedUser.activeBaby) {
+      activeBaby = await Baby.findById(updatedUser.activeBaby).populate(
+        babyPopulate,
+      );
+    }
+
+    const response = formatUserResponse(updatedUser, null, [], ["resetToken"]);
+
+    response.babyInfo = activeBaby ? getBabyInfo(activeBaby) : null;
+    response.hasBaby = !!activeBaby;
+
     return sendResponse({
       res,
       statusCode: 200,

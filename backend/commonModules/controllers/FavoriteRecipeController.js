@@ -1,7 +1,11 @@
 const FavoriteRecipe = require("@models/FavoriteRecipe");
 const Recipe = require("@models/Recipe");
-
-const { sendResponse, validateParams } = require("@utils/responseUtil");
+const {
+  sendResponse,
+  validateParams,
+  parsePaginationParams,
+  generateMeta,
+} = require("@utils/responseUtil");
 
 // Add recipe to favorites
 const addFavorite = async (req, res) => {
@@ -110,21 +114,36 @@ const getFavorites = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    const favorites = await FavoriteRecipe.find({
+    const { page, limit, skip } = parsePaginationParams(req);
+
+    const query = {
       user: userId,
-    })
-      .populate({
-        path: "recipe",
-        select:
-          "_id title image prepTime mealType nutritionTags acceptanceLabel",
-      })
-      .sort({ createdAt: -1 });
+    };
+
+    const [favorites, totalRecords] = await Promise.all([
+      FavoriteRecipe.find(query)
+        .populate({
+          path: "recipe",
+          select:
+            "_id title image prepTime mealType nutritionTags acceptanceLabel",
+        })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+
+      FavoriteRecipe.countDocuments(query),
+    ]);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: favorites,
+      meta: generateMeta({
+        page,
+        limit,
+        totalRecords,
+      }),
     });
   } catch (error) {
     return sendResponse({

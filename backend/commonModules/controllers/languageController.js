@@ -58,13 +58,28 @@ const createLanguage = async (req, res) => {
 // Get all languages with pagination
 const getLanguages = async (req, res) => {
   try {
-    const languages = await Language.find({ active: true }).sort({ title: 1 });
+    const { page, limit, skip } = parsePaginationParams(req);
+
+    const query = {
+      active: true,
+    };
+
+    const totalRecords = await Language.countDocuments(query);
+    const languages = await Language.find(query)
+      .sort({ title: 1 })
+      .skip(skip)
+      .limit(limit);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "languages_fetched_success",
       data: languages,
+      meta: generateMeta({
+        page,
+        limit,
+        totalRecords,
+      }),
     });
   } catch (error) {
     return sendResponse({

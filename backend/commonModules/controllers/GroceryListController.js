@@ -95,7 +95,7 @@ const getGroceryList = async (req, res) => {
           groceryChecklist: [],
           ingredientCategories: [],
         },
-        meta: generateMeta(0, page, limit),
+        meta: generateMeta(page, limit, 0),
       });
     }
 
@@ -147,7 +147,7 @@ const getGroceryList = async (req, res) => {
         groceryChecklist: paginatedChecklist,
         ingredientCategories,
       },
-      meta: generateMeta(totalRecords, page, limit),
+      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     return sendResponse({

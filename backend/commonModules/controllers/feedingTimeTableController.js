@@ -6,6 +6,7 @@ const {
   sendResponse,
   parsePaginationParams,
   generateMeta,
+  validateParams,
 } = require("@utils/responseUtil");
 const { getBabyInfo, babyPopulate } = require("@utils/babyUtil");
 
@@ -37,30 +38,26 @@ const getFeedingTimetable = async (req, res) => {
 
     const { page, limit, skip } = parsePaginationParams(req);
 
+    const today = new Date().toISOString().split("T")[0];
+
     const query = {
       baby: baby._id,
       user: req.user._id,
       date: today,
     };
 
-    const today = new Date().toISOString().split("T")[0];
-
-    const [totalRecords, schedule, logs] = await Promise.all([
+    const [schedules, logs, totalRecords] = await Promise.all([
       FeedingSchedule.find(query).sort({ time: 1 }).skip(skip).limit(limit),
 
-      FeedingLog.find({
-        baby: baby._id,
-        user: req.user._id,
-        date: today,
-      }),
+      FeedingLog.find(query),
+
+      FeedingSchedule.countDocuments(query),
     ]);
 
     const completedIds = new Set(logs.map((log) => String(log.slotId)));
 
-    const todaySchedule = schedule.query((item) => item.date === today);
-
     const recommendedToday =
-      todaySchedule.map((slot) => ({
+      schedules.map((slot) => ({
         id: slot._id,
         type: slot.type,
         title: slot.title,
@@ -70,6 +67,16 @@ const getFeedingTimetable = async (req, res) => {
       })) || [];
 
     const nextMeal = recommendedToday.find((meal) => !meal.completed) || null;
+
+    const recommendedTodayWithBadge = recommendedToday.map((meal) => ({
+      ...meal,
+
+      badge: meal.completed
+        ? "completed"
+        : nextMeal && String(meal.id) === String(nextMeal.id)
+          ? "upnext"
+          : null,
+    }));
 
     const completionRate =
       recommendedToday.length === 0
@@ -90,7 +97,7 @@ const getFeedingTimetable = async (req, res) => {
 
         completionRate,
 
-        recommendedToday,
+        recommendedToday: recommendedTodayWithBadge,
 
         nextMeal,
 
@@ -102,11 +109,151 @@ const getFeedingTimetable = async (req, res) => {
           "Observe reactions carefully",
         ],
       },
-      meta: generateMeta({
-        page,
-        limit,
-        totalRecords,
-      }),
+      meta: generateMeta(page, limit, totalRecords),
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const getTimetables = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id).populate("activeBaby");
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const { page, limit, skip } = parsePaginationParams(req);
+
+    const query = {
+      baby: user.activeBaby,
+      user: req.user._id,
+    };
+
+    const totalRecords = await FeedingSchedule.countDocuments(query);
+
+    const timetables = await FeedingSchedule.find(query)
+      .select("date")
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const grouped = [
+      ...new Map(
+        timetables.map((item) => [
+          item.date,
+          {
+            date: item.date,
+          },
+        ]),
+      ).values(),
+    ];
+
+    const title = `Feeding Timetable for ${user.activeBaby.name}`;
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: grouped.map((x) => ({
+        title: title,
+        date: x.date,
+        meta: generateMeta(page, limit, totalRecords),
+      })),
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const getTimetableDetail = async (req, res) => {
+  try {
+    if (!validateParams(req, res, { queryParams: ["date"] })) return;
+    const { date } = req.query;
+    const user = await User.findById(req.user._id).populate("activeBaby");
+
+    const baby = await Baby.findById(user.activeBaby).populate(babyPopulate);
+
+    const schedules = await FeedingSchedule.find({
+      baby: user.activeBaby,
+      user: req.user._id,
+      date,
+    }).sort({ time: 1 });
+
+    const logs = await FeedingLog.find({
+      baby: user.activeBaby,
+      user: req.user._id,
+      date,
+    });
+
+    const completedIds = new Set(logs.map((log) => String(log.slotId)));
+
+    const nextMeal =
+      schedules.find((meal) => !completedIds.has(String(meal._id)))?._id ||
+      null;
+
+    const recommendedToday = schedules.map((slot) => ({
+      id: slot._id,
+      type: slot.type,
+      title: slot.title,
+      description: slot.description,
+      time: slot.time,
+      completed: completedIds.has(String(slot._id)),
+      badge: completedIds.has(String(slot._id))
+        ? "Completed"
+        : String(slot._id) === String(nextMeal)
+          ? "upnext"
+          : null,
+    }));
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: {
+        babyInfo: getBabyInfo(baby),
+        recommendedToday,
+      },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const deleteTimetable = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+
+    await FeedingSchedule.deleteMany({
+      baby: user.activeBaby,
+      user: req.user._id,
+      date: req.query.date,
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "timetable_deleted_successfully",
     });
   } catch (error) {
     return sendResponse({
@@ -120,4 +267,7 @@ const getFeedingTimetable = async (req, res) => {
 
 module.exports = {
   getFeedingTimetable,
+  getTimetables,
+  getTimetableDetail,
+  deleteTimetable,
 };

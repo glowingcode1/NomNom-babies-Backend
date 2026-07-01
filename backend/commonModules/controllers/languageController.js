@@ -75,11 +75,7 @@ const getLanguages = async (req, res) => {
       statusCode: 200,
       translationKey: "languages_fetched_success",
       data: languages,
-      meta: generateMeta({
-        page,
-        limit,
-        totalRecords,
-      }),
+      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     return sendResponse({

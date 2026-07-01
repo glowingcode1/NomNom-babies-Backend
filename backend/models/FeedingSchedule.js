@@ -31,7 +31,7 @@ const feedingScheduleSchema = new mongoose.Schema(
     },
     description: {
       type: String,
-      default: "", // e.g. "Breast Milk / Formula • Light morning feeding"
+      default: "",
     },
     isOptional: {
       type: Boolean,

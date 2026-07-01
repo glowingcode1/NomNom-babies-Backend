@@ -25,14 +25,13 @@ const feedingLogSchema = new mongoose.Schema(
       default: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 // One log per slot per day per baby
 feedingLogSchema.index({ baby: 1, date: 1, slotId: 1 }, { unique: true });
 
 const FeedingLog =
-  mongoose.models.FeedingLog ||
-  mongoose.model("FeedingLog", feedingLogSchema);
+  mongoose.models.FeedingLog || mongoose.model("FeedingLog", feedingLogSchema);
 
 module.exports = FeedingLog;

@@ -132,4 +132,3 @@ dist
 .env.prod
 .env.dev
 uploads*
-backend/secretAssets/serviceAccountKey.json

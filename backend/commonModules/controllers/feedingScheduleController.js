@@ -345,11 +345,7 @@ const getUserFeedingSchedules = async (req, res) => {
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: schedules,
-      meta: generateMeta({
-        page,
-        limit,
-        totalRecords,
-      }),
+      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     return sendResponse({
@@ -399,11 +395,7 @@ const getUserBabyFeedingSchedule = async (req, res) => {
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: schedule,
-      meta: generateMeta({
-        page,
-        limit,
-        totalRecords,
-      }),
+      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     return sendResponse({

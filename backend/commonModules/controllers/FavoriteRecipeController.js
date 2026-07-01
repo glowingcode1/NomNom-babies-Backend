@@ -124,8 +124,7 @@ const getFavorites = async (req, res) => {
       FavoriteRecipe.find(query)
         .populate({
           path: "recipe",
-          select:
-            "_id title image prepTime mealType nutritionTags acceptanceLabel",
+          select: "_id title image prepTime mealType",
         })
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -138,12 +137,18 @@ const getFavorites = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
-      data: favorites,
-      meta: generateMeta({
-        page,
-        limit,
-        totalRecords,
-      }),
+      data: favorites.map((item) => ({
+        id: item.recipe?._id,
+
+        title: item.recipe?.title,
+
+        image: item.recipe?.image,
+
+        prepTime: item.recipe?.prepTime,
+
+        mealType: item.recipe?.mealType,
+      })),
+      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     return sendResponse({

@@ -15,6 +15,9 @@ const favoriteRecipeRoutes = require("./FavoriteRecipeRoutes.js");
 const groceryListRoutes = require("./groceryListRoutes.js");
 const foodTrackerRoutes = require("./foodTrackerRoutes.js");
 const feedingTimeTableRoutes = require("./feedingTimeTableRoutes.js");
+const reminderRoutes = require("./reminderRoutes.js");
+const foodLogRoutes = require("./foodLogRoutes.js");
+const subscriptionRoutes = require("./subscriptionRoutes.js");
 
 router.use("/upload", uploadRoutes);
 router.use("/upload/s3", uploads3Routes);
@@ -29,5 +32,7 @@ router.use("/favorites", favoriteRecipeRoutes);
 router.use("/grocery-list", groceryListRoutes);
 router.use("/food-tracker", foodTrackerRoutes);
 router.use("/feeding-timetable", feedingTimeTableRoutes);
-
+router.use("/reminders", reminderRoutes);
+router.use("/food-logs", foodLogRoutes);
+router.use("/subscription", subscriptionRoutes);
 module.exports = router;

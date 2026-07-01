@@ -539,7 +539,7 @@ const getBabyRecipes = async (req, res) => {
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: recipes,
-      meta,
+      meta: meta,
     });
   } catch (error) {
     return sendResponse({

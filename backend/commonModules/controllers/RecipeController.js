@@ -6,6 +6,8 @@ const {
   generateMeta,
 } = require("@utils/responseUtil");
 const Baby = require("@models/Baby");
+const { User } = require("@models/UserModel");
+const { babyPopulate } = require("@utils/babyUtil");
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -87,7 +89,7 @@ const getRecipeById = async (req, res) => {
 
         image: recipe.image,
 
-        prepTime: `${recipe.prepTime} mins`,
+        prepTime: `${recipe.prepTime} min`,
 
         mealType: recipe.mealType,
 
@@ -551,6 +553,81 @@ const getBabyRecipes = async (req, res) => {
   }
 };
 
+const getCustomCulturalPicks = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+        data: {
+          hasBaby: false,
+        },
+      });
+    }
+
+    const baby = await Baby.findById(user.activeBaby).populate(babyPopulate);
+
+    if (!baby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const { page, limit, skip } = parsePaginationParams(req);
+
+    const query = {
+      country: {
+        $in: baby.selectedCountries.map((c) => c._id),
+      },
+      babyStage: baby.babyStage?._id,
+      isActive: true,
+      status: "published",
+    };
+
+    const [recipes, totalRecords] = await Promise.all([
+      Recipe.find(query)
+        .populate("country", "_id name")
+        .sort({
+          createdAt: -1,
+        })
+        .skip(skip)
+        .limit(limit),
+
+      Recipe.countDocuments(query),
+    ]);
+
+    const customCulturalPicks = recipes.map((recipe) => ({
+      id: recipe._id,
+      title: recipe.title,
+      image: recipe.image,
+      mealType: recipe.mealType,
+      prepTime: recipe.prepTime,
+      country: recipe.country?.name || "",
+    }));
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: customCulturalPicks,
+      meta: generateMeta(page, limit, totalRecords),
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getRecipes,
   getRecipeById,
@@ -562,4 +639,5 @@ module.exports = {
   updateRecipe,
   updateRecipeStatus,
   deleteRecipe,
+  getCustomCulturalPicks,
 };

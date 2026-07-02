@@ -63,6 +63,7 @@
     "node-cron": "^4.2.1",
     "nodemon": "^3.1.7",
     "p-limit": "^6.2.0",
+    "pdfkit": "^0.19.1",
     "sharp": "^0.33.5",
     "shortid": "^2.2.16",
     "sib-api-v3-sdk": "^8.5.0",

@@ -481,7 +481,15 @@ const getOtherUserProfile = async (req, res, next) => {
  * @returns {Promise<void>}
  */
 const updateUserProfile = async (req, res, next) => {
-  const { name, profileIcon, phoneNumber, location, distanceUnit } = req.body;
+  const {
+    name,
+    profileIcon,
+    phoneNumber,
+    parentCaregiverName,
+    babyName,
+    location,
+    distanceUnit,
+  } = req.body;
   const currentUser = req.user;
 
   try {
@@ -495,6 +503,30 @@ const updateUserProfile = async (req, res, next) => {
       });
     }
 
+    if (babyName) {
+      if (!user.activeBaby) {
+        return sendResponse({
+          res,
+          statusCode: 404,
+          translationKey: "baby_not_found",
+        });
+      }
+
+      const baby = await Baby.findById(user.activeBaby);
+
+      if (!baby) {
+        return sendResponse({
+          res,
+          statusCode: 404,
+          translationKey: "baby_not_found",
+        });
+      }
+
+      baby.name = babyName.trim();
+
+      await baby.save();
+    }
+
     if (profileIcon) {
       user.profileIcon = profileIcon;
     }
@@ -505,6 +537,8 @@ const updateUserProfile = async (req, res, next) => {
 
     // Update fields if provided
     if (name && name.trim() !== "") user.name = name;
+    if (parentCaregiverName && parentCaregiverName.trim() !== "")
+      user.parentCaregiverName = parentCaregiverName;
     if (phoneNumber) {
       //validate phone using validator
       if (!validator.isMobilePhone(phoneNumber)) {

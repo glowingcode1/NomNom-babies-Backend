@@ -1,6 +1,5 @@
 const GroceryList = require("@models/GroceryList");
 const Recipe = require("@models/Recipe");
-const Baby = require("@models/Baby");
 
 const {
   sendResponse,
@@ -63,7 +62,7 @@ const addRecipeToGroceryList = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 200,
-      translationKey: "grocery_list_updated_success",
+      translationKey: "grocery_list_updated_successfully",
       data: groceryList,
     });
   } catch (error) {
@@ -232,17 +231,27 @@ const updateGroceryItem = async (req, res) => {
       });
     }
 
-    const item = groceryList.items.id(itemId);
+    let ingredient = null;
 
-    if (!item) {
+    groceryList.recipes.forEach((recipe) => {
+      const found = recipe.ingredients.id(itemId);
+
+      if (found) {
+        ingredient = found;
+      }
+    });
+
+    if (!ingredient) {
       return sendResponse({
         res,
+
         statusCode: 404,
-        translationKey: "grocery_item_not_found",
+
+        translationKey: "ingredient_not_found",
       });
     }
 
-    item.checked = checked;
+    ingredient.checked = checked;
 
     await groceryList.save();
 
@@ -250,7 +259,7 @@ const updateGroceryItem = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "grocery_item_updated_success",
-      data: item,
+      data: ingredient,
     });
   } catch (error) {
     return sendResponse({
@@ -317,17 +326,24 @@ const removeGroceryItem = async (req, res) => {
       });
     }
 
-    const item = groceryList.items.id(itemId);
+    let ingredientFound = false;
 
-    if (!item) {
+    groceryList.recipes.forEach((recipe) => {
+      const ingredient = recipe.ingredients.id(itemId);
+
+      if (ingredient) {
+        ingredient.deleteOne();
+        ingredientFound = true;
+      }
+    });
+
+    if (!ingredientFound) {
       return sendResponse({
         res,
         statusCode: 404,
-        translationKey: "grocery_item_not_found",
+        translationKey: "ingredient_not_found",
       });
     }
-
-    item.deleteOne();
 
     await groceryList.save();
 

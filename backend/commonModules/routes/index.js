@@ -18,6 +18,7 @@ const feedingTimeTableRoutes = require("./feedingTimeTableRoutes.js");
 const reminderRoutes = require("./reminderRoutes.js");
 const foodLogRoutes = require("./foodLogRoutes.js");
 const subscriptionRoutes = require("./subscriptionRoutes.js");
+const downloadPdfRoutes = require("./downloadPdfRoutes.js");
 
 router.use("/upload", uploadRoutes);
 router.use("/upload/s3", uploads3Routes);
@@ -35,4 +36,5 @@ router.use("/feeding-timetable", feedingTimeTableRoutes);
 router.use("/reminders", reminderRoutes);
 router.use("/food-logs", foodLogRoutes);
 router.use("/subscription", subscriptionRoutes);
+router.use("/download-pdf", downloadPdfRoutes);
 module.exports = router;

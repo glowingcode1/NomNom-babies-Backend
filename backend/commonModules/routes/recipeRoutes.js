@@ -14,6 +14,7 @@ const {
   getUserRecipes,
   getUserBabyRecipes,
   getBabyRecipes,
+  getCustomCulturalPicks,
 } = require("../controllers/RecipeController");
 
 const router = express.Router();
@@ -26,6 +27,7 @@ const deleteRecipeRateLimiter = createRateLimiter("deleteRecipe", 15, 15);
 router.get("/", auth, getRecipes);
 router.get("/admin/users/:userId", auth, getUserRecipes);
 router.get("/admin/users/:userId/baby/:babyId", auth, getUserBabyRecipes);
+router.get("/cultural-picks", auth, getCustomCulturalPicks);
 router.get("/:id", auth, getRecipeById);
 router.get("/baby/:babyId", auth, getBabyRecipes);
 

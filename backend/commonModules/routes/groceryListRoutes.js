@@ -4,6 +4,7 @@ const {
   updateGroceryItem,
   removeGroceryItem,
   clearGroceryList,
+  removeRecipeFromGroceryList,
 } = require("@controllersCommonModules/GroceryListController");
 const auth = require("@middlewares/authMiddleware");
 const createRateLimiter = require("@utils/rateLimiter");
@@ -31,6 +32,9 @@ router.patch("/item/:itemId", auth, updateItemRateLimiter, updateGroceryItem);
 
 // Remove Item
 router.delete("/item/:itemId", auth, removeItemRateLimiter, removeGroceryItem);
+
+// Remove Recipe from GroceryList
+router.delete("/:recipeId", auth, removeRecipeFromGroceryList);
 
 // CLear whole List
 router.delete("/clear", auth, clearListRateLimiter, clearGroceryList);

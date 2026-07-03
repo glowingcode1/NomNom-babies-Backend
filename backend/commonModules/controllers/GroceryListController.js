@@ -123,7 +123,10 @@ const getGroceryList = async (req, res) => {
             categoriesMap[ingredient.category] = [];
           }
 
-          categoriesMap[ingredient.category].push(ingredient.name);
+          categoriesMap[ingredient.category] = [
+            ...(categoriesMap[ingredient.category] || []),
+            ingredient.name,
+          ];
         }
       });
     });
@@ -134,7 +137,8 @@ const getGroceryList = async (req, res) => {
 
     const ingredientCategories = Object.keys(categoriesMap).map((category) => ({
       category,
-      items: categoriesMap[category],
+
+      items: [...new Set(categoriesMap[category])],
     }));
 
     return sendResponse({

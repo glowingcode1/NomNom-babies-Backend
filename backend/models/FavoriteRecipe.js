@@ -9,6 +9,13 @@ const favoriteRecipeSchema = new mongoose.Schema(
       index: true,
     },
 
+    baby: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Baby",
+      required: true,
+      index: true,
+    },
+
     recipe: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Recipe",

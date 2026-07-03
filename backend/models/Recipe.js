@@ -60,7 +60,7 @@ const recipeSchema = new mongoose.Schema(
     },
     acceptanceLabel: {
       type: String,
-      default: "", // e.g. "Parent Tested"
+      default: "",
     },
     status: {
       type: String,
@@ -71,6 +71,7 @@ const recipeSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    
   },
   { timestamps: true },
 );

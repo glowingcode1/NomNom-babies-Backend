@@ -8,6 +8,8 @@ const {
 const Baby = require("@models/Baby");
 const { User } = require("@models/UserModel");
 const { babyPopulate } = require("@utils/babyUtil");
+const FavoriteRecipe = require("@models/FavoriteRecipe");
+const GroceryList = require("@models/GroceryList");
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -16,39 +18,103 @@ const getRecipes = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
   try {
-    const { countryId, stageId, search = "" } = req.query;
+    const { countryId, stageId, search = "", filter } = req.query;
 
-    const query = { status: "published", isActive: true };
+    const query = {
+      status: "published",
+      isActive: true,
+    };
 
     if (countryId) query.country = countryId;
+
     if (stageId) query.babyStage = stageId;
-    if (search) query.title = { $regex: search, $options: "i" };
+
+    if (search) {
+      query.title = {
+        $regex: search,
+        $options: "i",
+      };
+    }
+
+    if (filter === "favorite") {
+      const userId = req.user._id;
+
+      const user = await User.findById(userId);
+
+      if (!user?.activeBaby) {
+        return sendResponse({
+          res,
+
+          statusCode: 200,
+
+          translationKey: "data_fetched_successfully",
+
+          data: [],
+
+          meta: generateMeta(page, limit, 0),
+        });
+      }
+
+      const favoriteIds = await FavoriteRecipe.find({
+        user: userId,
+
+        baby: user.activeBaby,
+      }).distinct("recipe");
+
+      query._id = {
+        $in: favoriteIds,
+      };
+    }
 
     const [recipes, totalRecords] = await Promise.all([
       Recipe.find(query)
+
         .populate("country", "_id name")
+
         .populate("babyStage", "_id title")
-        .select("title image prepTime mealType nutritionTags country babyStage")
-        .sort({ createdAt: -1 })
+
+        .select(
+          `
+            title
+            image
+            prepTime
+            mealType
+            nutritionTags
+            country
+            babyStage
+          `,
+        )
+
+        .sort({
+          createdAt: -1,
+        })
+
         .skip((page - 1) * limit)
+
         .limit(limit),
+
       Recipe.countDocuments(query),
     ]);
 
-    const meta = generateMeta(page, limit, totalRecords);
-
     return sendResponse({
       res,
+
       statusCode: 200,
+
       translationKey: "data_fetched_successfully",
+
       data: recipes,
-      meta,
+
+      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     return sendResponse({
       res,
+
       statusCode: 500,
+
       translationKey: "internal_server",
+
       error: error.message,
     });
   }
@@ -78,6 +144,40 @@ const getRecipeById = async (req, res) => {
       });
     }
 
+    const user = await User.findById(req.user._id);
+
+    let isFavorite = false;
+    let isAddedToGroceryList = false;
+    let groceryIngredients = [];
+
+    if (user?.activeBaby) {
+      const [favorite, groceryList] = await Promise.all([
+        FavoriteRecipe.exists({
+          user: req.user._id,
+          baby: user.activeBaby,
+          recipe: recipe._id,
+        }),
+
+        GroceryList.findOne({
+          user: req.user._id,
+        }),
+      ]);
+
+      isFavorite = !!favorite;
+
+      if (groceryList) {
+        const groceryRecipe = groceryList.recipes.find(
+          (item) => item.recipe.toString() === recipe._id.toString(),
+        );
+
+        if (groceryRecipe) {
+          isAddedToGroceryList = true;
+
+          groceryIngredients = groceryRecipe.ingredients;
+        }
+      }
+    }
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -89,7 +189,7 @@ const getRecipeById = async (req, res) => {
 
         image: recipe.image,
 
-        prepTime: `${recipe.prepTime} min`,
+        prepTime: `${recipe.prepTime}`,
 
         mealType: recipe.mealType,
 
@@ -109,13 +209,32 @@ const getRecipeById = async (req, res) => {
 
         nutritionTags: recipe.nutritionTags,
 
-        ingredients: recipe.ingredients.map((item) => ({
-          name: item.name,
+        ingredients: recipe.ingredients.map((ingredient) => {
+          const groceryIngredient = groceryIngredients.find(
+            (item) =>
+              item.name.trim().toLowerCase() ===
+              ingredient.name.trim().toLowerCase(),
+          );
 
-          quantity: item.quantity,
+          return {
+            name: ingredient.name,
 
-          icon: item.icon,
-        })),
+            quantity: ingredient.quantity,
+
+            icon: ingredient.icon,
+
+            isAddedToGroceryList: !!groceryIngredient,
+
+            checked: groceryIngredient?.checked ?? false,
+
+            groceryItem: groceryIngredient
+              ? {
+                  _id: groceryIngredient._id,
+                  category: groceryIngredient.category,
+                }
+              : null,
+          };
+        }),
 
         instructions: recipe.method.map((step) => ({
           step: step.step,
@@ -129,6 +248,8 @@ const getRecipeById = async (req, res) => {
 
         acceptanceLabel: recipe.acceptanceLabel,
 
+        isFavorite,
+
         actions: {
           nutritionFacts: true,
 
@@ -137,6 +258,201 @@ const getRecipeById = async (req, res) => {
           addToGroceryList: true,
         },
       },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const getBabyRecipes = async (req, res) => {
+  const { page, limit } = parsePaginationParams(req);
+
+  const { search = "", country } = req.query;
+
+  try {
+    const user = await User.findById(req.user._id);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+    const baby = await Baby.findOne({
+      _id: user.activeBaby,
+      user: req.user._id,
+      isActive: true,
+    });
+
+    if (!baby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const query = {
+      status: "published",
+      isActive: true,
+      babyStage: baby.babyStage,
+    };
+
+    const selectedCountryId = baby.selectedCountries.map((country) =>
+      country._id.toString(),
+    );
+
+    if (country) {
+      if (!selectedCountryId.includes(country)) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "invalid_country",
+        });
+      }
+
+      query.country = country;
+    } else {
+      query.country = {
+        $in: selectedCountryId,
+      };
+    }
+
+    if (search.trim()) {
+      query.title = {
+        $regex: search.trim(),
+        $options: "i",
+      };
+    }
+
+    const favoriteIds = await FavoriteRecipe.find({
+      user: req.user._id,
+
+      baby: baby._id,
+    }).distinct("recipe");
+
+    const [recipes, totalRecords] = await Promise.all([
+      Recipe.find(query)
+        .populate("country", "_id name")
+        .populate("babyStage", "_id title")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+
+      Recipe.countDocuments(query),
+    ]);
+
+    const data = recipes.map((recipe) => ({
+      _id: recipe._id,
+
+      title: recipe.title,
+
+      image: recipe.image,
+
+      prepTime: recipe.prepTime,
+
+      mealType: recipe.mealType,
+
+      nutritionTags: recipe.nutritionTags,
+
+      country: recipe.country,
+
+      babyStage: recipe.babyStage,
+
+      isFavorite: favoriteIds.some(
+        (id) => id.toString() === recipe._id.toString(),
+      ),
+    }));
+
+    const meta = generateMeta(page, limit, totalRecords);
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data,
+      meta,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const getCustomCulturalPicks = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+        data: {
+          hasBaby: false,
+        },
+      });
+    }
+
+    const baby = await Baby.findById(user.activeBaby).populate(babyPopulate);
+
+    if (!baby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
+    const { page, limit, skip } = parsePaginationParams(req);
+
+    const query = {
+      country: {
+        $in: baby.selectedCountries.map((c) => c._id),
+      },
+      babyStage: baby.babyStage?._id,
+      isActive: true,
+      status: "published",
+    };
+
+    const [recipes, totalRecords] = await Promise.all([
+      Recipe.find(query)
+        .populate("country", "_id name")
+        .sort({
+          createdAt: -1,
+        })
+        .skip(skip)
+        .limit(limit),
+
+      Recipe.countDocuments(query),
+    ]);
+
+    const customCulturalPicks = recipes.map((recipe) => ({
+      id: recipe._id,
+      title: recipe.title,
+      image: recipe.image,
+      mealType: recipe.mealType,
+      prepTime: recipe.prepTime,
+      country: recipe.country?.name || "",
+    }));
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: customCulturalPicks,
+      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     return sendResponse({
@@ -479,144 +795,6 @@ const deleteRecipe = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "recipe_deleted_success",
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
-
-const getBabyRecipes = async (req, res) => {
-  const { page, limit } = parsePaginationParams(req);
-
-  try {
-    if (
-      !validateParams(req, res, {
-        pathParams: ["babyId"],
-        objectIdFields: ["babyId"],
-      })
-    )
-      return;
-
-    const baby = await Baby.findOne({
-      _id: req.params.babyId,
-      user: req.user._id,
-      isActive: true,
-    });
-
-    if (!baby) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "baby_not_found",
-      });
-    }
-
-    const query = {
-      status: "published",
-      isActive: true,
-      babyStage: baby.babyStage,
-      country: { $in: baby.selectedCountries },
-    };
-
-    const [recipes, totalRecords] = await Promise.all([
-      Recipe.find(query)
-        .populate("country", "_id name")
-        .populate("babyStage", "_id title")
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit),
-
-      Recipe.countDocuments(query),
-    ]);
-
-    const meta = generateMeta(page, limit, totalRecords);
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "data_fetched_successfully",
-      data: recipes,
-      meta: meta,
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
-
-const getCustomCulturalPicks = async (req, res) => {
-  try {
-    const userId = req.user._id;
-    const user = await User.findById(userId);
-
-    if (!user?.activeBaby) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "baby_not_found",
-        data: {
-          hasBaby: false,
-        },
-      });
-    }
-
-    const baby = await Baby.findById(user.activeBaby).populate(babyPopulate);
-
-    if (!baby) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "baby_not_found",
-      });
-    }
-
-    const { page, limit, skip } = parsePaginationParams(req);
-
-    const query = {
-      country: {
-        $in: baby.selectedCountries.map((c) => c._id),
-      },
-      babyStage: baby.babyStage?._id,
-      isActive: true,
-      status: "published",
-    };
-
-    const [recipes, totalRecords] = await Promise.all([
-      Recipe.find(query)
-        .populate("country", "_id name")
-        .sort({
-          createdAt: -1,
-        })
-        .skip(skip)
-        .limit(limit),
-
-      Recipe.countDocuments(query),
-    ]);
-
-    const customCulturalPicks = recipes.map((recipe) => ({
-      id: recipe._id,
-      title: recipe.title,
-      image: recipe.image,
-      mealType: recipe.mealType,
-      prepTime: recipe.prepTime,
-      country: recipe.country?.name || "",
-    }));
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "data_fetched_successfully",
-      data: customCulturalPicks,
-      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     return sendResponse({

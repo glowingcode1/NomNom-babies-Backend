@@ -5,14 +5,18 @@ const Baby = require("@models/Baby");
 const { User } = require("@models/UserModel");
 
 const {
-  generateFeedingSchedulePdf,
-  generateRecipePdf,
-  generateGroceryPdf,
-} = require("@utils/downloadPdfUtil");
+  generateFeedingTimeTablePdf,
+} = require("@utils/downloadPdf/feedingTimeTablePdf");
+
+const { generateRecipePdf } = require("@utils/downloadPdf/recipeDetailPdf");
+
+const { generateGroceryPdf } = require("@utils/downloadPdf/groceryListPdf");
 
 const { sendResponse } = require("@utils/responseUtil");
+const { babyPopulate } = require("@utils/babyUtil");
+const FeedingLog = require("@models/FeedingLog");
 
-const downloadFeedingSchedulePdf = async (req, res) => {
+const downloadFeedingTimeTablePdf = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
 
@@ -23,22 +27,69 @@ const downloadFeedingSchedulePdf = async (req, res) => {
         translationKey: "baby_not_found",
       });
     }
+    const today = new Date().toISOString().split("T")[0];
 
-    const baby = await Baby.findById(user.activeBaby).populate("babyStage");
+    const baby = await Baby.findById(user.activeBaby).populate(babyPopulate);
 
     const schedules = await FeedingSchedule.find({
-      baby: user.activeBaby,
+      baby: baby._id,
       user: req.user._id,
-    }).sort({
-      date: 1,
-      time: 1,
+      date: today,
+    }).sort({ time: 1 });
+
+    const logs = await FeedingLog.find({
+      baby: baby._id,
+      user: req.user._id,
+      date: today,
     });
 
-    const pdf = await generateFeedingSchedulePdf(baby, schedules);
+    const completedIds = new Set(logs.map((log) => String(log.slotId)));
+
+    const recommendedToday = schedules.map((slot) => ({
+      id: slot._id,
+      type: slot.type,
+      title: slot.title,
+      description: slot.description,
+      time: slot.time,
+      completed: completedIds.has(String(slot._id)),
+    }));
+
+    const completionRate =
+      recommendedToday.length === 0
+        ? 0
+        : Math.round(
+            (recommendedToday.filter((m) => m.completed).length /
+              recommendedToday.length) *
+              100,
+          );
+
+    const babyInfo = {
+      _id: baby._id,
+      name: baby.name,
+      profileIcon: baby.profileIcon,
+      stage: {
+        _id: baby.babyStage._id,
+        title: baby.babyStage.title,
+      },
+      countries: baby.selectedCountries,
+    };
+
+    const feedingNotes = [
+      "Introduce one new food at a time to track allergies",
+      "Use soft puree texture",
+      "Observe reactions carefully",
+    ];
+
+    const pdf = await generateFeedingTimeTablePdf({
+      babyInfo,
+      completionRate,
+      recommendedToday,
+      feedingNotes,
+    });
 
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'attachment; filename="feeding.pdf"',
+      "Content-Disposition": 'attachment; filename="feeding-timetable.pdf"',
     });
 
     return res.send(pdf);
@@ -54,9 +105,9 @@ const downloadFeedingSchedulePdf = async (req, res) => {
 
 const downloadRecipePdf = async (req, res) => {
   try {
-    const recipe = await Recipe.findById(req.params.recipeId).populate(
-      "country",
-    );
+    const recipe = await Recipe.findById(req.params.recipeId)
+      .populate("country", "_id name")
+      .populate("babyStage", "_id title");
 
     if (!recipe) {
       return sendResponse({
@@ -66,10 +117,55 @@ const downloadRecipePdf = async (req, res) => {
       });
     }
 
-    const pdf = await generateRecipePdf(recipe);
+    const recipeResponse = {
+      recipeId: recipe._id,
+
+      title: recipe.title,
+
+      image: recipe.image,
+
+      prepTime: `${recipe.prepTime}`,
+
+      mealType: recipe.mealType,
+
+      stage: recipe.babyStage
+        ? {
+            _id: recipe.babyStage._id,
+            title: recipe.babyStage.title,
+          }
+        : null,
+
+      country: recipe.country
+        ? {
+            _id: recipe.country._id,
+            name: recipe.country.name,
+          }
+        : null,
+
+      nutritionTags: recipe.nutritionTags || [],
+
+      ingredients: recipe.ingredients.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        icon: item.icon,
+      })),
+
+      instructions: recipe.method.map((step) => ({
+        step: step.step,
+
+        description: step.instruction,
+      })),
+
+      notes: recipe.notes,
+
+      acceptanceLabel: recipe.acceptanceLabel,
+    };
+
+    const pdf = await generateRecipePdf(recipeResponse);
 
     res.set({
       "Content-Type": "application/pdf",
+
       "Content-Disposition": `attachment; filename="${recipe.title}.pdf"`,
     });
 
@@ -77,8 +173,11 @@ const downloadRecipePdf = async (req, res) => {
   } catch (error) {
     return sendResponse({
       res,
+
       statusCode: 500,
+
       translationKey: "internal_server",
+
       error: error.message,
     });
   }
@@ -88,7 +187,7 @@ const downloadGroceryPdf = async (req, res) => {
   try {
     const grocery = await GroceryList.findOne({
       user: req.user._id,
-    }).populate("recipes.recipe");
+    }).populate("recipes.recipe", "_id title image");
 
     if (!grocery) {
       return sendResponse({
@@ -98,26 +197,93 @@ const downloadGroceryPdf = async (req, res) => {
       });
     }
 
-    const pdf = await generateGroceryPdf(grocery);
+    ////////////////////////////////////////////
+
+    const recipesIncluded = grocery.recipes.map((recipe) => ({
+      recipeId: recipe.recipe._id,
+
+      title: recipe.recipe.title,
+
+      image: recipe.recipe.image || "",
+    }));
+
+    ////////////////////////////////////////////
+
+    const groceryChecklist = [];
+
+    const categoriesMap = {};
+
+    grocery.recipes.forEach((recipe) => {
+      recipe.ingredients.forEach((ingredient) => {
+        groceryChecklist.push({
+          _id: ingredient._id,
+
+          name: ingredient.name,
+
+          icon: ingredient.icon || "",
+
+          quantity: ingredient.quantity,
+
+          checked: ingredient.checked,
+
+          category: ingredient.category,
+        });
+
+        if (ingredient.category) {
+          if (!categoriesMap[ingredient.category]) {
+            categoriesMap[ingredient.category] = [];
+          }
+
+          categoriesMap[ingredient.category] = [
+            ...(categoriesMap[ingredient.category] || []),
+            ingredient.name,
+          ];
+        }
+      });
+    });
+
+    ////////////////////////////////////////////
+
+    const ingredientCategories = Object.keys(categoriesMap).map((category) => ({
+      category,
+
+      items: [...new Set(categoriesMap[category])],
+    }));
+
+    ////////////////////////////////////////////
+
+    const groceryResponse = {
+      recipesIncluded,
+
+      groceryChecklist,
+
+      ingredientCategories,
+    };
+
+    const pdf = await generateGroceryPdf(groceryResponse);
 
     res.set({
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'attachment; filename="grocery.pdf"',
+
+      "Content-Disposition": 'attachment; filename="grocery-list.pdf"',
     });
 
     return res.send(pdf);
   } catch (error) {
     return sendResponse({
       res,
+
       statusCode: 500,
+
       translationKey: "internal_server",
+
       error: error.message,
     });
   }
 };
 
 module.exports = {
-  downloadFeedingSchedulePdf,
+  downloadFeedingTimeTablePdf,
   downloadRecipePdf,
   downloadGroceryPdf,
 };

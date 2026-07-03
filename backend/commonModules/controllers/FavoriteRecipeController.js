@@ -1,5 +1,6 @@
 const FavoriteRecipe = require("@models/FavoriteRecipe");
 const Recipe = require("@models/Recipe");
+const { User } = require("@models/UserModel");
 const {
   sendResponse,
   validateParams,
@@ -20,7 +21,18 @@ const addFavorite = async (req, res) => {
     }
 
     const { recipeId } = req.params;
+
     const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
 
     const recipe = await Recipe.findById(recipeId);
 
@@ -34,6 +46,9 @@ const addFavorite = async (req, res) => {
 
     const existingFavorite = await FavoriteRecipe.findOne({
       user: userId,
+
+      baby: user.activeBaby,
+
       recipe: recipeId,
     });
 
@@ -47,20 +62,29 @@ const addFavorite = async (req, res) => {
 
     const favorite = await FavoriteRecipe.create({
       user: userId,
+
+      baby: user.activeBaby,
+
       recipe: recipeId,
     });
 
     return sendResponse({
       res,
+
       statusCode: 201,
+
       translationKey: "recipe_favorited_success",
+
       data: favorite,
     });
   } catch (error) {
     return sendResponse({
       res,
+
       statusCode: 500,
+
       translationKey: "internal_server",
+
       error: error.message,
     });
   }
@@ -79,31 +103,52 @@ const removeFavorite = async (req, res) => {
     }
 
     const { recipeId } = req.params;
+
     const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
 
     const favorite = await FavoriteRecipe.findOneAndDelete({
       user: userId,
+
+      baby: user.activeBaby,
+
       recipe: recipeId,
     });
 
     if (!favorite) {
       return sendResponse({
         res,
+
         statusCode: 404,
+
         translationKey: "favorite_not_found",
       });
     }
 
     return sendResponse({
       res,
+
       statusCode: 200,
+
       translationKey: "favorite_removed_success",
     });
   } catch (error) {
     return sendResponse({
       res,
+
       statusCode: 500,
+
       translationKey: "internal_server",
+
       error: error.message,
     });
   }

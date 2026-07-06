@@ -20,17 +20,36 @@ const createStageRateLimiter = createRateLimiter("createBabyStage", 15, 15); // 
 const updateStageRateLimiter = createRateLimiter("updateBabyStage", 15, 15); // 15 requests per 15 minutes
 const deleteStageRateLimiter = createRateLimiter("deleteBabyStage", 15, 15); // 15 requests per 15 minutes
 
-// PUBLIC (any logged-in user) 
+// PUBLIC (any logged-in user)
 router.get("/", auth, getBabyStages);
 router.get("/:id", auth, getBabyStageById);
 router.post("/select", auth, selectBabyStage);
 
-//  CONTENT ADMIN + SUPER ADMIN 
-router.get("/admin/all", auth, /**authorizeRoles("contentAdmin", "superAdmin"),**/ adminGetBabyStages);
-router.post("/", auth, /**authorizeRoles("contentAdmin", "superAdmin"),**/ createStageRateLimiter, createBabyStage);
-router.put("/:id", auth, /**authorizeRoles("contentAdmin", "superAdmin"),**/   updateStageRateLimiter, updateBabyStage);
+//  CONTENT ADMIN + SUPER ADMIN
+router.get(
+  "/admin/all",
+  auth,
+  /**authorizeRoles("contentAdmin", "superAdmin"),**/ adminGetBabyStages,
+);
+router.post(
+  "/",
+  auth,
+  /**authorizeRoles("contentAdmin", "superAdmin"),**/ createStageRateLimiter,
+  createBabyStage,
+);
+router.put(
+  "/:id",
+  auth,
+  /**authorizeRoles("contentAdmin", "superAdmin"),**/ updateStageRateLimiter,
+  updateBabyStage,
+);
 
-// SUPER ADMIN ONLY 
-router.delete("/:id", auth, /**authorizeRoles("superAdmin"),**/ deleteStageRateLimiter, deleteBabyStage);
+// SUPER ADMIN ONLY
+router.delete(
+  "/:id",
+  auth,
+  /**authorizeRoles("superAdmin"),**/ deleteStageRateLimiter,
+  deleteBabyStage,
+);
 
 module.exports = router;

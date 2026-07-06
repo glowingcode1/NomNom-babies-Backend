@@ -15,6 +15,7 @@ const { generateGroceryPdf } = require("@utils/downloadPdf/groceryListPdf");
 const { sendResponse } = require("@utils/responseUtil");
 const { babyPopulate } = require("@utils/babyUtil");
 const FeedingLog = require("@models/FeedingLog");
+const { savePdf } = require("@utils/downloadPdf/pdfStorage");
 
 const downloadFeedingTimeTablePdf = async (req, res) => {
   try {
@@ -46,7 +47,7 @@ const downloadFeedingTimeTablePdf = async (req, res) => {
     const completedIds = new Set(logs.map((log) => String(log.slotId)));
 
     const recommendedToday = schedules.map((slot) => ({
-      id: slot._id,
+      _id: slot._id,
       type: slot.type,
       title: slot.title,
       description: slot.description,
@@ -87,12 +88,18 @@ const downloadFeedingTimeTablePdf = async (req, res) => {
       feedingNotes,
     });
 
-    res.set({
-      "Content-Type": "application/pdf",
-      "Content-Disposition": 'attachment; filename="feeding-timetable.pdf"',
-    });
+    const relativePath = await savePdf(pdf, `feeding-${baby._id}.pdf`);
 
-    return res.send(pdf);
+    const pdfUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: {
+        pdfUrl,
+      },
+    });
   } catch (error) {
     return sendResponse({
       res,
@@ -163,13 +170,20 @@ const downloadRecipePdf = async (req, res) => {
 
     const pdf = await generateRecipePdf(recipeResponse);
 
-    res.set({
-      "Content-Type": "application/pdf",
+    const filename = `recipe-${recipe._id}.pdf`;
 
-      "Content-Disposition": `attachment; filename="${recipe.title}.pdf"`,
+    const relativePath = await savePdf(pdf, filename);
+
+    const pdfUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: {
+        pdfUrl,
+      },
     });
-
-    return res.send(pdf);
   } catch (error) {
     return sendResponse({
       res,
@@ -262,13 +276,18 @@ const downloadGroceryPdf = async (req, res) => {
 
     const pdf = await generateGroceryPdf(groceryResponse);
 
-    res.set({
-      "Content-Type": "application/pdf",
+    const relativePath = await savePdf(pdf, `grocery-${req.user._id}.pdf`);
 
-      "Content-Disposition": 'attachment; filename="grocery-list.pdf"',
+    const pdfUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: {
+        pdfUrl,
+      },
     });
-
-    return res.send(pdf);
   } catch (error) {
     return sendResponse({
       res,

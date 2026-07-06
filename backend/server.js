@@ -181,6 +181,7 @@ const appRoutes = require("./app/routes");
 app.use("/api/app", appRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api", routes);
+app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
 // Swagger
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerFile));

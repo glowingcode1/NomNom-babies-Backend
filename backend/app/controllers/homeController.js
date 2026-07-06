@@ -95,7 +95,7 @@ const getHome = async (req, res) => {
 
     const recommendedMeals =
       todaySchedule.map((slot) => ({
-        id: slot._id,
+        _id: slot._id,
         type: slot.type,
         title: slot.title,
         description: slot.description,
@@ -155,7 +155,7 @@ const getHome = async (req, res) => {
         weeklyJourney,
 
         customCulturalPicks: culturalRecipes.map((recipe) => ({
-          id: recipe._id,
+          _id: recipe._id,
           title: recipe.title,
           image: recipe.image,
           mealType: recipe.mealType,
@@ -164,7 +164,7 @@ const getHome = async (req, res) => {
         })),
 
         foodTracker: foodTracker.map((item) => ({
-          id: item._id,
+          _id: item._id,
           ingredientName: item.ingredientName,
           image: item.image,
           date: item.date,
@@ -181,7 +181,7 @@ const getHome = async (req, res) => {
           : null,
 
         nextMeal: nextMeal ? {
-          id: nextMeal._id,
+          _id: nextMeal._id,
           type: nextMeal.type,
           title: nextMeal.title,
           description: nextMeal.description,

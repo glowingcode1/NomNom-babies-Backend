@@ -1,4 +1,5 @@
 const Country = require("@models/Country");
+const Recipe = require("@models/Recipe");
 const { User } = require("@models/UserModel");
 const {
   sendResponse,
@@ -293,6 +294,18 @@ const toggleCountry = async (req, res) => {
 
 const deleteCountry = async (req, res) => {
   try {
+    const recipeCount = await Recipe.countDocuments({
+      country: req.params.id,
+    });
+
+    if (recipeCount > 0) {
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "country_has_recipes",
+      });
+    }
+
     const country = await Country.findByIdAndDelete(req.params.id);
 
     if (!country) {
@@ -343,19 +356,82 @@ const adminGetCountries = async (req, res) => {
     }
 
     const [countries, totalCountries] = await Promise.all([
-      Country.find(query)
-        .sort({ name: 1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean(),
+      Country.aggregate([
+        {
+          $match: query,
+        },
+
+        {
+          $lookup: {
+            from: "recipes",
+            let: {
+              countryId: "$_id",
+            },
+
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $eq: ["$country", "$$countryId"],
+                  },
+                },
+              },
+
+              {
+                $count: "count",
+              },
+            ],
+
+            as: "recipeStats",
+          },
+        },
+
+        {
+          $addFields: {
+            recipes: {
+              $ifNull: [
+                {
+                  $arrayElemAt: ["$recipeStats.count", 0],
+                },
+                0,
+              ],
+            },
+
+            enabled: "$isEnabled",
+          },
+        },
+
+        {
+          $project: {
+            name: 1,
+            code: 1,
+            status: 1,
+            isEnabled: 1,
+            enabled: 1,
+            signatureFoods: 1,
+            recipes: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        },
+
+        {
+          $sort: {
+            name: 1,
+          },
+        },
+
+        {
+          $skip: (page - 1) * limit,
+        },
+
+        {
+          $limit: limit,
+        },
+      ]),
+
       Country.countDocuments(query),
     ]);
-
-    const formattedCountries = countries.map((country) => ({
-      ...country,
-      enabled: country.isEnabled,
-      recipies: 0,
-    }));
 
     const meta = generateMeta(page, limit, totalCountries);
 

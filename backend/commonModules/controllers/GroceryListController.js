@@ -1,5 +1,8 @@
+const Baby = require("@models/Baby");
 const GroceryList = require("@models/GroceryList");
 const Recipe = require("@models/Recipe");
+const { User } = require("@models/UserModel");
+const { babyPopulate } = require("@utils/babyUtil");
 
 const {
   sendResponse,
@@ -11,6 +14,20 @@ const {
 const addRecipeToGroceryList = async (req, res) => {
   try {
     const { recipeId, ingredients } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "data_fetched_successfully",
+        data: {
+          hasBaby: false,
+          recommendedToday: [],
+        },
+      });
+    }
 
     const recipe = await Recipe.findById(recipeId);
 
@@ -24,11 +41,13 @@ const addRecipeToGroceryList = async (req, res) => {
 
     let groceryList = await GroceryList.findOne({
       user: req.user._id,
+      baby: user.activeBaby,
     });
 
     if (!groceryList) {
       groceryList = await GroceryList.create({
         user: req.user._id,
+        baby: user.activeBaby,
         recipes: [],
       });
     }
@@ -49,6 +68,7 @@ const addRecipeToGroceryList = async (req, res) => {
       recipe: recipeId,
 
       ingredients: ingredients.map((ingredient) => ({
+        ingredientId: ingredient.ingredientId,
         name: ingredient.name,
         quantity: ingredient.quantity,
         category: ingredient.category,
@@ -78,10 +98,28 @@ const addRecipeToGroceryList = async (req, res) => {
 // Get grocery list
 const getGroceryList = async (req, res) => {
   try {
+    const user = await User.findById(req.user._id);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 200,
+        translationKey: "data_fetched_successfully",
+        data: {
+          recipesIncluded: [],
+
+          groceryChecklist: [],
+
+          ingredientCategories: [],
+        },
+      });
+    }
+
     const { page, limit, skip } = parsePaginationParams(req);
 
     const groceryList = await GroceryList.findOne({
       user: req.user._id,
+      baby: user.activeBaby,
     }).populate("recipes.recipe", "_id title image");
 
     if (!groceryList) {
@@ -167,8 +205,21 @@ const updateIngredientStatus = async (req, res) => {
     const { ingredientId } = req.params;
     const { checked } = req.body;
 
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
     const groceryList = await GroceryList.findOne({
       user: req.user._id,
+      baby: user.activeBaby,
     });
 
     if (!groceryList) {
@@ -221,10 +272,21 @@ const updateGroceryItem = async (req, res) => {
   try {
     const { itemId } = req.params;
     const { checked } = req.body;
+
     const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
 
     const groceryList = await GroceryList.findOne({
       user: userId,
+      baby: user.activeBaby,
     });
 
     if (!groceryList) {
@@ -279,8 +341,20 @@ const removeRecipeFromGroceryList = async (req, res) => {
   try {
     const { recipeId } = req.params;
 
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
     const groceryList = await GroceryList.findOne({
       user: req.user._id,
+      baby: user.activeBaby,
     });
 
     if (!groceryList) {
@@ -316,10 +390,21 @@ const removeRecipeFromGroceryList = async (req, res) => {
 const removeGroceryItem = async (req, res) => {
   try {
     const { itemId } = req.params;
+
     const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
 
     const groceryList = await GroceryList.findOne({
       user: userId,
+      baby: user.activeBaby,
     });
 
     if (!groceryList) {
@@ -369,9 +454,21 @@ const removeGroceryItem = async (req, res) => {
 // Clear list
 const clearGroceryList = async (req, res) => {
   try {
+    const userId = req.user._id;
+    const user = await User.findById(userId);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
+
     await GroceryList.findOneAndUpdate(
       {
-        user: req.user._id,
+        user: userId,
+        baby: user.activeBaby,
       },
       {
         recipes: [],

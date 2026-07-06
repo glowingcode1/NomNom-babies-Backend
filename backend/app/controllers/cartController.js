@@ -27,7 +27,7 @@ const getCartRecipes = async (req, res) => {
     }
 
     const recipes = cart.recipes.map((item) => ({
-      id: item.recipe._id,
+      _id: item.recipe._id,
 
       title: item.recipe.title,
 

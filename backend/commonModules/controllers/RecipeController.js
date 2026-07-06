@@ -124,9 +124,13 @@ const getRecipes = async (req, res) => {
 const getRecipeById = async (req, res) => {
   try {
     if (
-      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
-    )
+      !validateParams(req, res, {
+        pathParams: ["id"],
+        objectIdFields: ["id"],
+      })
+    ) {
       return;
+    }
 
     const recipe = await Recipe.findOne({
       _id: req.params.id,
@@ -147,7 +151,9 @@ const getRecipeById = async (req, res) => {
     const user = await User.findById(req.user._id);
 
     let isFavorite = false;
+
     let isAddedToGroceryList = false;
+
     let groceryIngredients = [];
 
     if (user?.activeBaby) {
@@ -160,10 +166,11 @@ const getRecipeById = async (req, res) => {
 
         GroceryList.findOne({
           user: req.user._id,
+          baby: user.activeBaby,
         }),
       ]);
 
-      isFavorite = !!favorite;
+      isFavorite = Boolean(favorite);
 
       if (groceryList) {
         const groceryRecipe = groceryList.recipes.find(
@@ -178,92 +185,110 @@ const getRecipeById = async (req, res) => {
       }
     }
 
+    const groceryMap = new Map();
+
+    groceryIngredients.forEach((ingredient) => {
+      groceryMap.set(String(ingredient.ingredient), ingredient);
+    });
+
+    const formatRecipeIngredients = (ingredients, groceryMap) => {
+      return ingredients.map((ingredient) => {
+        const groceryIngredient = groceryMap.get(String(ingredient._id));
+
+        return {
+          _id: ingredient._id,
+          name: ingredient.name,
+          quantity: ingredient.quantity,
+          icon: ingredient.icon,
+          isAddedToGroceryList: Boolean(groceryIngredient),
+          checked: groceryIngredient?.checked ?? false,
+          groceryItem: groceryIngredient
+            ? {
+                _id: groceryIngredient._id,
+                category: groceryIngredient.category,
+              }
+            : null,
+        };
+      });
+    };
+
+    const formatRecipeResponse = ({
+      recipe,
+      groceryMap,
+      isFavorite,
+      isAddedToGroceryList,
+    }) => ({
+      recipeId: recipe._id,
+
+      title: recipe.title,
+
+      image: recipe.image,
+
+      prepTime: String(recipe.prepTime),
+
+      mealType: recipe.mealType,
+
+      stage: recipe.babyStage
+        ? {
+            _id: recipe.babyStage._id,
+            title: recipe.babyStage.title,
+          }
+        : null,
+
+      country: recipe.country
+        ? {
+            _id: recipe.country._id,
+            name: recipe.country.name,
+          }
+        : null,
+
+      nutritionTags: recipe.nutritionTags,
+
+      ingredients: formatRecipeIngredients(recipe.ingredients, groceryMap),
+
+      instructions: recipe.method.map((step) => ({
+        step: step.step,
+        title: `Step ${step.step}`,
+        description: step.instruction,
+      })),
+
+      notes: recipe.notes,
+
+      acceptanceLabel: recipe.acceptanceLabel,
+
+      isFavorite,
+
+      isAddedToGroceryList,
+
+      actions: {
+        nutritionFacts: true,
+        downloadPdf: true,
+        addToGroceryList: true,
+      },
+    });
+
     return sendResponse({
       res,
+
       statusCode: 200,
+
       translationKey: "data_fetched_successfully",
-      data: {
-        recipeId: recipe._id,
 
-        title: recipe.title,
-
-        image: recipe.image,
-
-        prepTime: `${recipe.prepTime}`,
-
-        mealType: recipe.mealType,
-
-        stage: recipe.babyStage
-          ? {
-              _id: recipe.babyStage._id,
-              title: recipe.babyStage.title,
-            }
-          : null,
-
-        country: recipe.country
-          ? {
-              _id: recipe.country._id,
-              name: recipe.country.name,
-            }
-          : null,
-
-        nutritionTags: recipe.nutritionTags,
-
-        ingredients: recipe.ingredients.map((ingredient) => {
-          const groceryIngredient = groceryIngredients.find(
-            (item) =>
-              item.name.trim().toLowerCase() ===
-              ingredient.name.trim().toLowerCase(),
-          );
-
-          return {
-            name: ingredient.name,
-
-            quantity: ingredient.quantity,
-
-            icon: ingredient.icon,
-
-            isAddedToGroceryList: !!groceryIngredient,
-
-            checked: groceryIngredient?.checked ?? false,
-
-            groceryItem: groceryIngredient
-              ? {
-                  _id: groceryIngredient._id,
-                  category: groceryIngredient.category,
-                }
-              : null,
-          };
-        }),
-
-        instructions: recipe.method.map((step) => ({
-          step: step.step,
-
-          title: `Step ${step.step}`,
-
-          description: step.instruction,
-        })),
-
-        notes: recipe.notes,
-
-        acceptanceLabel: recipe.acceptanceLabel,
-
+      data: formatRecipeResponse({
+        recipe,
+        groceryMap,
         isFavorite,
-
-        actions: {
-          nutritionFacts: true,
-
-          downloadPdf: true,
-
-          addToGroceryList: true,
-        },
-      },
+        isAddedToGroceryList,
+      }),
     });
   } catch (error) {
     return sendResponse({
       res,
+
       statusCode: 500,
+
       translationKey: "internal_server",
+
       error: error.message,
     });
   }
@@ -439,7 +464,7 @@ const getCustomCulturalPicks = async (req, res) => {
     ]);
 
     const customCulturalPicks = recipes.map((recipe) => ({
-      id: recipe._id,
+      _id: recipe._id,
       title: recipe.title,
       image: recipe.image,
       mealType: recipe.mealType,

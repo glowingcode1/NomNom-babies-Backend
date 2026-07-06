@@ -1,10 +1,10 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const countrySchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Country name is required'],
+      required: [true, "Country name is required"],
       trim: true,
     },
     code: {
@@ -14,7 +14,7 @@ const countrySchema = new mongoose.Schema(
       uppercase: true,
       unique: true,
     },
-    status:{
+    status: {
       type: String,
       enum: ["active", "review", "disabled"],
       default: "active",
@@ -28,7 +28,7 @@ const countrySchema = new mongoose.Schema(
       default: [],
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-module.exports = mongoose.model('Country', countrySchema);
+module.exports = mongoose.model("Country", countrySchema);

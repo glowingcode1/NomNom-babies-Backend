@@ -12,10 +12,16 @@ const { userCache } = require("@config/nodeCache");
 const fs = require("fs");
 const path = require("path");
 const Baby = require("@models/Baby");
+const Recipe = require("@models/Recipe");
+const FavoriteRecipe = require("@models/FavoriteRecipe");
+const SupportRequest = require("@models/SupportRequest");
+const Subscription = require("@models/Subscription");
+const FeedingLog = require("@models/FeedingLog");
+const FeedingSchedule = require("@models/FeedingSchedule");
 // Path to the JSON file
 const currenciesFilePath = path.join(
   process.cwd(),
-  "backend/assets/currencies/currencies.json"
+  "backend/assets/currencies/currencies.json",
 );
 
 // Function to read the JSON file and parse it
@@ -36,7 +42,7 @@ const currenciesData = readJSONFile(currenciesFilePath);
 
 const allUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10, keyword = "" } = req.query;
+    const { page = 1, limit = 10, keyword = "", status, country } = req.query;
 
     const query = {
       "accountState.userType": { $ne: "admin" },
@@ -51,6 +57,14 @@ const allUsers = async (req, res) => {
         { email: { $regex: keyword, $options: "i" } },
         { phoneNumber: { $exists: true, $regex: keyword, $options: "i" } },
       ];
+    }
+
+    if (status && status !== "all") {
+      query["accountState.status"] = status;
+    }
+
+    if (country) {
+      query["onboarding.selectedCountries"] = country;
     }
 
     const [users, totalRecords] = await Promise.all([
@@ -84,7 +98,7 @@ const allUsers = async (req, res) => {
       }
 
       babiesMap[userId].push({
-        id: baby._id,
+        _id: baby._id,
         name: baby.name,
         avatar: "",
         status: baby.isActive ? "active" : "inActive",
@@ -94,17 +108,12 @@ const allUsers = async (req, res) => {
     });
 
     const formattedUsers = users.map((user) => ({
-      id: user._id,
+      _id: user._id,
       name: user.name,
       email: user.email,
       avatar: user.profileIcon || "",
 
-      status:
-        user.accountState?.status === "active"
-          ? "active"
-          : user.accountState?.status === "inactive"
-            ? "inactive"
-            : "inactive",
+      status: user.accountState?.status || "inactive",
 
       foodCultures:
         user.onboarding?.selectedCountries?.map((country) => country.name) ||
@@ -147,19 +156,122 @@ const getUserById = async (req, res) => {
       });
     }
 
-    const babies = await Baby.find({
-      user: user._id,
-    })
-      .populate("selectedCountries", "_id name")
-      .lean();
+    const [
+      babies,
+      recipes,
+      feedingSchedules,
+      feedingLogs,
+      favoriteRecipes,
+      subscriptions,
+      supportQuestions,
+    ] = await Promise.all([
+      Baby.find({
+        user: user._id,
+      })
+        .populate("selectedCountries", "_id name")
+        .lean(),
+      Recipe.find({
+        user: user._id,
+      })
+        .populate("recipe", "title image category")
+        .populate("baby", "name")
+        .sort({ updatedAt: -1 })
+        .lean(),
+
+      FeedingSchedule.find({
+        user: id,
+      })
+        .populate("baby", "name")
+        .lean(),
+
+      FeedingLog.find({
+        user: user._id,
+      }).lean(),
+
+      FavoriteRecipe.find({
+        user: user._id,
+      })
+        .populate("recipe", "title image")
+        .lean(),
+
+      Subscription.find({
+        user: user._id,
+      })
+        .sort({ createdAt: -1 })
+        .lean(),
+
+      SupportRequest.find({
+        user: user._id,
+      })
+        .sort({ createdAt: -1 })
+        .lean(),
+    ]);
+
+    const timetables = feedingSchedules.map((schedule) => {
+      const logs = feedingLogs.filter(
+        (log) => log.schedule?.toString() === schedule._id.toString(),
+      );
+
+      return {
+        _id: schedule._id,
+
+        babyId: schedule.baby?._id,
+
+        babyName: schedule.baby?.name || "",
+
+        recipeName: schedule.recipeName || "",
+
+        mealCount: logs.length,
+
+        schedule: logs.map((log) => ({
+          time: log.time,
+          meal: log.mealName,
+        })),
+
+        createdAt: schedule.createdAt,
+      };
+    });
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "user_fetched_successfully",
       data: {
-        ...user,
+        _id: user._id,
+
+        name: user.name,
+
+        email: user.email,
+
+        phone: user.phoneNumber,
+
+        profileIcon: user.profileIcon,
+
+        timezone: user.timezone,
+
+        language: user.language,
+
+        createdAt: user.createdAt,
+
+        updatedAt: user.updatedAt,
+
+        accountState: user.accountState,
+
+        subscriptions: user.subscriptions,
+
+        foodCultures: user.onboarding?.selectedCountries || [],
+
         babies,
+
+        subscriptionHistory: subscriptions,
+
+        favoriteRecipes,
+
+        recipes,
+
+        supportQuestions,
+
+        timetables,
       },
     });
   } catch (error) {
@@ -171,7 +283,6 @@ const getUserById = async (req, res) => {
     });
   }
 };
-
 
 const updateUserStatus = async (req, res) => {
   try {

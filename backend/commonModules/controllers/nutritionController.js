@@ -147,37 +147,127 @@ const getNutrition = async (req, res) => {
 
 // Get all nutrition entries with pagination (admin)
 const adminGetNutritions = async (req, res) => {
-  const { page, limit, skip } = parsePaginationParams(req);
+  const { page, limit } = parsePaginationParams(req);
 
   try {
-    const { search = "", isActive } = req.query;
+    const { search = "", status } = req.query;
 
-    const query = {};
-    if (isActive !== undefined) query.isActive = isActive === "true";
+    const match = {};
 
-    const allNutritions = await Nutrition.find(query)
-      .populate({
-        path: "recipe",
-        match: search ? { title: { $regex: search, $options: "i" } } : {},
-        select: "title",
-      })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    if (status) {
+      match.status = status;
+    }
 
-    const filtered = search
-      ? allNutritions.filter((n) => n.recipe !== null)
-      : allNutritions;
+    const pipeline = [
+      {
+        $match: match,
+      },
 
-    const totalRecords = filtered.length;
-    const paginated = filtered.slice((page - 1) * limit, page * limit);
+      {
+        $addFields: {
+          tagName: {
+            $arrayElemAt: ["$nutrients.name", 0],
+          },
+
+          benefit: {
+            $arrayElemAt: ["$nutrients.benefit", 0],
+          },
+        },
+      },
+
+      {
+        $lookup: {
+          from: "recipes",
+
+          let: {
+            tag: "$tagName",
+          },
+
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ["$$tag", "$nutritionTags"],
+                },
+              },
+            },
+          ],
+
+          as: "recipeDocs",
+        },
+      },
+
+      {
+        $addFields: {
+          recipes: {
+            $size: "$recipeDocs",
+          },
+        },
+      },
+
+      {
+        $match: {
+          ...(search && {
+            $or: [
+              {
+                tagName: {
+                  $regex: search,
+
+                  $options: "i",
+                },
+              },
+
+              {
+                benefit: {
+                  $regex: search,
+
+                  $options: "i",
+                },
+              },
+            ],
+          }),
+        },
+      },
+
+      {
+        $project: {
+          name: "$tagName",
+
+          benefit: 1,
+
+          recipes: 1,
+
+          status: 1,
+        },
+      },
+
+      {
+        $sort: {
+          name: 1,
+        },
+      },
+
+      {
+        $facet: {
+          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+
+          total: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const result = await Nutrition.aggregate(pipeline);
+
+    const rows = result[0].data;
+
+    const totalRecords = result[0].total[0]?.count || 0;
     const meta = generateMeta(page, limit, totalRecords);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
-      data: paginated,
+      data: rows,
       meta,
     });
   } catch (error) {

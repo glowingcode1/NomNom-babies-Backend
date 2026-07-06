@@ -7,6 +7,7 @@ const {
   generateMeta,
   validateParams,
 } = require("@utils/responseUtil");
+const Recipe = require("@models/Recipe");
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -141,14 +142,74 @@ const selectBabyStage = async (req, res) => {
 const adminGetBabyStages = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
+  const { search, status = "all" } = req.query;
+
+  const filters = {};
+
+  if (status === "active") {
+    filters.active = true;
+  }
+  if (status === "disabled") {
+    filters.active = false;
+  }
+  if (search) {
+    filters.$or = [
+      {
+        title: {
+          $regex: search,
+          $options: "i",
+        },
+        features: {
+          $elemMatch: {
+            $regex: search,
+            $options: "i",
+          },
+        },
+      },
+    ];
+  }
+
   try {
     const [stages, totalStages] = await Promise.all([
-      BabyStage.find()
+      BabyStage.find(filters)
         .sort({ createdAt: 1 })
         .skip((page - 1) * limit)
         .limit(limit),
-      BabyStage.countDocuments(),
+      BabyStage.countDocuments(filters),
     ]);
+
+    const stageIds = stages.map((s) => s._id);
+
+    const recipeCounts = await Recipe.aggregate([
+      {
+        $match: {
+          babyStage: {
+            $in: stageIds,
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$babyStage",
+
+          count: {
+            $sum: 1,
+          },
+        },
+      },
+    ]);
+
+    const recipeMap = {};
+
+    recipeCounts.forEach((item) => {
+      recipeMap[item._id.toString()] = item.count;
+    });
+
+    const data = stages.map((stage) => ({
+      ...stage.toObject(),
+
+      recipes: recipeMap[stage._id.toString()] || 0,
+    }));
 
     const meta = generateMeta(page, limit, totalStages);
 
@@ -156,7 +217,7 @@ const adminGetBabyStages = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
-      data: stages,
+      data,
       meta,
     });
   } catch (error) {
@@ -180,7 +241,21 @@ const createBabyStage = async (req, res) => {
 
     if (!validateParams(req, res, validationOptions)) return;
 
-    const stage = new BabyStage({ title, features });
+    const exists = await BabyStage.findOne({
+      title: title.trim(),
+    });
+
+    if (exists) {
+      return sendResponse({
+        res,
+
+        statusCode: 409,
+
+        translationKey: "baby_stage_already_exists",
+      });
+    }
+
+    const stage = new BabyStage({ title: title.trim(), features });
     await stage.save();
 
     return sendResponse({
@@ -220,9 +295,17 @@ const updateBabyStage = async (req, res) => {
       });
     }
 
-    stage.title = title || stage.title;
-    if (features !== undefined) stage.features = features;
-    if (active !== undefined) stage.active = active;
+    if (title !== undefined) {
+      stage.title = title.trim();
+    }
+
+    if (features !== undefined) {
+      stage.features = features;
+    }
+
+    if (active !== undefined) {
+      stage.active = active;
+    }
 
     await stage.save();
 
@@ -251,6 +334,18 @@ const deleteBabyStage = async (req, res) => {
     };
 
     if (!validateParams(req, res, validationOptions)) return;
+
+    const recipeCount = await Recipe.countDocuments({
+      babyStage: req.params.id,
+    });
+
+    if (recipeCount > 0) {
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "babyStage_has_recipes",
+      });
+    }
 
     const stage = await BabyStage.findByIdAndDelete(req.params.id);
     if (!stage) {

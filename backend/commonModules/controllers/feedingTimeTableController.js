@@ -58,7 +58,7 @@ const getFeedingTimetable = async (req, res) => {
 
     const recommendedToday =
       schedules.map((slot) => ({
-        id: slot._id,
+        _id: slot._id,
         type: slot.type,
         title: slot.title,
         description: slot.description,
@@ -208,7 +208,7 @@ const getTimetableDetail = async (req, res) => {
       null;
 
     const recommendedToday = schedules.map((slot) => ({
-      id: slot._id,
+      _id: slot._id,
       type: slot.type,
       title: slot.title,
       description: slot.description,

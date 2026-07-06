@@ -40,9 +40,17 @@ const recipeSchema = new mongoose.Schema(
     },
     ingredients: [
       {
+        ingredientId: {
+          type: mongoose.Schema.Types.ObjectId,
+          defaut: () => new mongoose.Types.ObjectId(),
+        },
         name: { type: String, required: true },
         quantity: { type: String, default: "" },
         icon: {
+          type: String,
+          default: "",
+        },
+        category: {
           type: String,
           default: "",
         },
@@ -71,7 +79,6 @@ const recipeSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    
   },
   { timestamps: true },
 );

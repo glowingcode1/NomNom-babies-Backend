@@ -48,6 +48,12 @@ const nutritionSchema = new mongoose.Schema(
       default: "",
     },
 
+    status: {
+      type: String,
+      enum: ["active", "disabled"],
+      default: "active",
+    },
+
     isWeeklyFocus: {
       type: Boolean,
       default: false,

@@ -22,7 +22,25 @@ const createLanguage = async (req, res) => {
       return;
     }
 
-    const language = new Language({ title, transliteration, flag, code });
+    const language = new Language({
+      title,
+      transliteration,
+      flag,
+      code,
+      active,
+    });
+
+    const exists = await Language.findOne({
+      code: code.toLowerCase(),
+    });
+
+    if (exists) {
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "language_code_unique_violation",
+      });
+    }
     await language.save();
 
     return sendResponse({
@@ -53,14 +71,58 @@ const createLanguage = async (req, res) => {
 const getLanguages = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
+  const { search, status = "all" } = req.query;
+
+  const filters = {};
+
+  if (status === "active") {
+    filters.active = true;
+  }
+
+  if (status === "inactive") {
+    filters.active = false;
+  }
+
+  if (search) {
+    filters.$or = [
+      {
+        title: {
+          $regex: search,
+          $options: "i",
+        },
+      },
+      {
+        transliteration: {
+          $regex: search,
+          $options: "i",
+        },
+      },
+      {
+        code: {
+          $regex: search,
+          $options: "i",
+        },
+      },
+    ];
+  }
+
   try {
     const [languages, totalLanguages] = await Promise.all([
-      Language.find({ active: true })
+      Language.find(filters)
         .sort({ title: 1 }) // Sort by title in alphabetical order
         .skip((page - 1) * limit)
         .limit(limit),
-      Language.countDocuments({ active: true }),
+      Language.countDocuments(filters),
     ]);
+
+    const formatted = languages.map((item) => ({
+      _id: item._id,
+      title: item.title,
+      transliteration: item.transliteration,
+      flag: item.flag,
+      code: item.code,
+      active: item.active,
+    }));
 
     const meta = generateMeta(page, limit, totalLanguages);
 
@@ -68,7 +130,7 @@ const getLanguages = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "languages_fetched_success", // Translation key for success
-      data: languages,
+      data: formatted,
       meta,
     });
   } catch (error) {
@@ -86,7 +148,6 @@ const updateLanguage = async (req, res) => {
   const { id } = req.params;
   const { title, transliteration, flag, code, active } = req.body;
   try {
-
     const validationOptions = {
       pathParams: ["id"],
       objectIdFields: ["id"],
@@ -104,10 +165,11 @@ const updateLanguage = async (req, res) => {
       });
     }
 
-    language.title = title || language.title;
-    language.transliteration = transliteration || language.transliteration;
-    language.flag = flag || language.flag;
-    language.code = code || language.code;
+    if (title !== undefined) language.title = title || language.title;
+    if (transliteration !== undefined)
+      language.transliteration = transliteration || language.transliteration;
+    if (flag !== undefined) language.flag = flag || language.flag;
+    if (code !== undefined) language.code = code || language.code;
     if (active !== undefined) {
       language.active = active;
     }
@@ -142,7 +204,6 @@ const deleteLanguage = async (req, res) => {
   const { id } = req.params;
 
   try {
-
     const validationOptions = {
       pathParams: ["id"],
       objectIdFields: ["id"],
@@ -203,7 +264,7 @@ const updateUserLanguage = async (req, res) => {
 
     user.language = language.code;
     await user.save();
-    userCache.del(userId.toString())
+    userCache.del(userId.toString());
     return sendResponse({
       res,
       statusCode: 200,

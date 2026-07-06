@@ -183,7 +183,7 @@ const getFavorites = async (req, res) => {
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: favorites.map((item) => ({
-        id: item.recipe?._id,
+        _id: item.recipe?._id,
 
         title: item.recipe?.title,
 

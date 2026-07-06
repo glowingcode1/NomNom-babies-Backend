@@ -1,6 +1,11 @@
 const mongoose = require("mongoose");
 
 const groceryIngredientSchema = new mongoose.Schema({
+  ingredient: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+  },
+
   name: String,
 
   quantity: String,
@@ -39,6 +44,13 @@ const groceryListSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      required: true,
+      unique: true,
+    },
+
+    baby: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Baby",
       required: true,
       unique: true,
     },

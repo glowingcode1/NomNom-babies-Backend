@@ -9,7 +9,7 @@ const languageRoutes = require("./languageRoutes.js");
 const adminPanelRoutes = require("./adminPanelRoutes.js");
 
 router.use("/settings", adminSettingsRoutes);
-router.use("/users", userRoutes);
+router.use("/user", userRoutes);
 router.use("/countries", countriesRoutes);
 router.use("/languages", languageRoutes);
 router.use("/admin-panel", adminPanelRoutes);

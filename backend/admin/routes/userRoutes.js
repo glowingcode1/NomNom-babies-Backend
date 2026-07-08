@@ -41,7 +41,7 @@ router.put("/profile", updateUserProfile);
 router.get("/allUsers", roleMiddleware(["admin"]), allUsers);
 router.get("/:id/babies", roleMiddleware(["admin"]), getUserBabies);
 router.get("/:id", roleMiddleware(["admin"]), getUserById);
-router.patch("/:id/status", roleMiddleware(["admin"]), updateUserStatus);
+router.put("/:id/status", roleMiddleware(["admin"]), updateUserStatus);
 router.delete("/:id", roleMiddleware(["admin"]), deleteUser);
 router.post("/:userIdToBlock/block", blockUser);
 router.post("/:userIdToReport/report", reportUser);

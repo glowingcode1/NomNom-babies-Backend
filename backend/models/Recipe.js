@@ -11,10 +11,6 @@ const recipeSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
-    views: {
-      type: Number,
-      default: 0,
-    },
     prepTime: {
       type: Number, // in minutes
       required: true,
@@ -31,12 +27,22 @@ const recipeSchema = new mongoose.Schema(
     },
     mealType: {
       type: String,
-      trim: true, // e.g. "Smooth Puree", "First Tastes", "Beginner Meal"
+      trim: true,
       default: "",
     },
-    nutritionTags: {
-      type: [String], // e.g. ["Vitamin A", "Iron", "Protein"]
-      default: [],
+    nutritionTags: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Nutrition",
+      },
+    ],
+    feedingInsight: {
+      type: String,
+      default: "",
+    },
+    allergyReminder: {
+      type: String,
+      default: "",
     },
     ingredients: [
       {
@@ -73,7 +79,7 @@ const recipeSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ["draft", "pending", "published", "archived"],
-      default: "draft",
+      default: "published",
     },
     isActive: {
       type: Boolean,

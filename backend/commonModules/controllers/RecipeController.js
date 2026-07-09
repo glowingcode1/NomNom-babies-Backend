@@ -1,4 +1,5 @@
 const Recipe = require("@models/Recipe");
+const Nutrition = require("@models/Nutrition");
 const {
   sendResponse,
   validateParams,
@@ -10,6 +11,25 @@ const { User } = require("@models/UserModel");
 const { babyPopulate } = require("@utils/babyUtil");
 const FavoriteRecipe = require("@models/FavoriteRecipe");
 const GroceryList = require("@models/GroceryList");
+
+
+const validateNutritionTagIds = async (nutritionTags = []) => {
+  if (!nutritionTags.length) return { valid: true };
+
+  const uniqueIds = [...new Set(nutritionTags.map((id) => String(id)))];
+
+  const found = await Nutrition.find({ _id: { $in: uniqueIds } }).select("_id");
+
+  const foundIds = new Set(found.map((doc) => String(doc._id)));
+
+  const invalidIds = uniqueIds.filter((id) => !foundIds.has(id));
+
+  if (invalidIds.length > 0) {
+    return { valid: false, invalidIds };
+  }
+
+  return { valid: true };
+};
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -72,6 +92,8 @@ const getRecipes = async (req, res) => {
         .populate("country", "_id name")
 
         .populate("babyStage", "_id title")
+
+        .populate("nutritionTags", "_id name benefit")
 
         .select(
           `
@@ -138,7 +160,8 @@ const getRecipeById = async (req, res) => {
       isActive: true,
     })
       .populate("country", "_id name")
-      .populate("babyStage", "_id title features");
+      .populate("babyStage", "_id title features")
+      .populate("nutritionTags", "_id name benefit");
 
     if (!recipe) {
       return sendResponse({
@@ -242,7 +265,15 @@ const getRecipeById = async (req, res) => {
           }
         : null,
 
-      nutritionTags: recipe.nutritionTags,
+      nutritionTags: recipe.nutritionTags.map((tag) => ({
+        _id: tag._id,
+        name: tag.name,
+        benefit: tag.benefit,
+      })),
+
+      feedingInsight: recipe.feedingInsight,
+
+      allergyReminder: recipe.allergyReminder,
 
       ingredients: formatRecipeIngredients(recipe.ingredients, groceryMap),
 
@@ -366,6 +397,7 @@ const getBabyRecipes = async (req, res) => {
       Recipe.find(query)
         .populate("country", "_id name")
         .populate("babyStage", "_id title")
+        .populate("nutritionTags", "_id name benefit")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit),
@@ -508,6 +540,7 @@ const adminGetRecipes = async (req, res) => {
       Recipe.find(query)
         .populate("country", "_id name")
         .populate("babyStage", "_id title")
+        .populate("nutritionTags", "_id name benefit")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit),
@@ -528,6 +561,52 @@ const adminGetRecipes = async (req, res) => {
       res,
       statusCode: 500,
       translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+const adminGetRecipeById = async (req, res) => {
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["id"],
+        objectIdFields: ["id"],
+      })
+    ) {
+      return;
+    }
+
+    const recipe = await Recipe.findById(req.params.id)
+      .populate("country", "_id name")
+      .populate("babyStage", "_id title")
+      .populate("nutritionTags", "_id name benefit");
+
+    if (!recipe) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "recipe_not_found",
+      });
+    }
+
+    return sendResponse({
+      res,
+
+      statusCode: 200,
+
+      translationKey: "data_fetched_successfully",
+
+      data: recipe,
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+
+      statusCode: 500,
+
+      translationKey: "internal_server",
+
       error: error.message,
     });
   }
@@ -568,6 +647,7 @@ const getUserRecipes = async (req, res) => {
     })
       .populate("country", "_id name")
       .populate("babyStage", "_id title")
+      .populate("nutritionTags", "_id name benefit")
       .select("title image prepTime mealType nutritionTags country babyStage")
       .sort({ createdAt: -1 });
 
@@ -619,6 +699,7 @@ const getUserBabyRecipes = async (req, res) => {
     })
       .populate("country", "_id name")
       .populate("babyStage", "_id title")
+      .populate("nutritionTags", "_id name benefit")
       .sort({ createdAt: -1 });
 
     return sendResponse({
@@ -656,11 +737,24 @@ const createRecipe = async (req, res) => {
       babyStage,
       mealType,
       nutritionTags,
+      feedingInsight,
+      allergyReminder,
       ingredients,
       method,
       notes,
       acceptanceLabel,
     } = req.body;
+
+    const { valid, invalidIds } = await validateNutritionTagIds(nutritionTags);
+
+    if (!valid) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_nutrition_tags",
+        data: { invalidIds },
+      });
+    }
 
     const recipe = await Recipe.create({
       title: title.trim(),
@@ -670,6 +764,8 @@ const createRecipe = async (req, res) => {
       babyStage,
       mealType: mealType || "",
       nutritionTags,
+      feedingInsight: feedingInsight || "",
+      allergyReminder: allergyReminder || "",
       ingredients: ingredients || [],
       method: method || [],
       notes: notes || "",
@@ -717,12 +813,42 @@ const updateRecipe = async (req, res) => {
       "babyStage",
       "mealType",
       "nutritionTags",
+      "feedingInsight",
+      "allergyReminder",
       "ingredients",
       "method",
       "notes",
       "acceptanceLabel",
+      "status",
       "isActive",
     ];
+
+    if (req.body.status) {
+      const allowedStatuses = ["draft", "pending", "published", "archived"];
+
+      if (!allowedStatuses.includes(req.body.status)) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "invalid_status",
+        });
+      }
+    }
+
+    if (req.body.nutritionTags) {
+      const { valid, invalidIds } = await validateNutritionTagIds(
+        req.body.nutritionTags,
+      );
+
+      if (!valid) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "invalid_nutrition_tags",
+          data: { invalidIds },
+        });
+      }
+    }
 
     fields.forEach((field) => {
       if (req.body[field] !== undefined) recipe[field] = req.body[field];
@@ -734,59 +860,6 @@ const updateRecipe = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "recipe_updated_success",
-      data: recipe,
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
-
-// Change recipe status (draft → pending → published → archived)
-const updateRecipeStatus = async (req, res) => {
-  try {
-    if (
-      !validateParams(req, res, {
-        pathParams: ["id"],
-        objectIdFields: ["id"],
-        rawData: ["status"],
-      })
-    )
-      return;
-
-    const { status } = req.body;
-    const allowed = ["draft", "pending", "published", "archived"];
-
-    if (!allowed.includes(status)) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "invalid_status",
-      });
-    }
-
-    const recipe = await Recipe.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true },
-    );
-
-    if (!recipe) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "recipe_not_found",
-      });
-    }
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "recipe_status_updated_success",
       data: recipe,
     });
   } catch (error) {
@@ -836,11 +909,11 @@ module.exports = {
   getRecipeById,
   getBabyRecipes,
   adminGetRecipes,
+  adminGetRecipeById,
   getUserRecipes,
   getUserBabyRecipes,
   createRecipe,
   updateRecipe,
-  updateRecipeStatus,
   deleteRecipe,
   getCustomCulturalPicks,
 };

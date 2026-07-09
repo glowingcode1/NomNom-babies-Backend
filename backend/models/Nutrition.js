@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const nutrientSchema = new mongoose.Schema(
+const nutritionSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -13,50 +13,11 @@ const nutrientSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-  },
-  { _id: false },
-);
-
-const nutritionSchema = new mongoose.Schema(
-  {
-    recipe: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Recipe",
-      default: null,
-      index: true,
-    },
-
-    babyStage: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "BabyStage",
-      default: null,
-      index: true,
-    },
-
-    nutrients: {
-      type: [nutrientSchema],
-      default: [],
-    },
-
-    feedingInsight: {
-      type: String,
-      default: "",
-    },
-
-    allergyReminder: {
-      type: String,
-      default: "",
-    },
 
     status: {
       type: String,
       enum: ["active", "disabled"],
       default: "active",
-    },
-
-    isWeeklyFocus: {
-      type: Boolean,
-      default: false,
     },
 
     isActive: {
@@ -66,26 +27,6 @@ const nutritionSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  },
-);
-
-nutritionSchema.index(
-  { recipe: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      recipe: { $exists: true },
-    },
-  },
-);
-
-nutritionSchema.index(
-  { babyStage: 1 },
-  {
-    unique: true,
-    partialFilterExpression: {
-      babyStage: { $exists: true },
-    },
   },
 );
 

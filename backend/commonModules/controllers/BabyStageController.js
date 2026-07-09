@@ -159,6 +159,8 @@ const adminGetBabyStages = async (req, res) => {
           $regex: search,
           $options: "i",
         },
+      },
+      {
         features: {
           $elemMatch: {
             $regex: search,

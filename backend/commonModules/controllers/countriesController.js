@@ -252,46 +252,6 @@ const updateCountry = async (req, res) => {
   }
 };
 
-const toggleCountry = async (req, res) => {
-  try {
-    const country = await Country.findById(req.params.id);
-
-    if (!country) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "country_not_found",
-      });
-    }
-
-    country.isEnabled = !country.isEnabled;
-    if (!country.isEnabled) {
-      country.status = "disabled";
-    }
-
-    if (country.isEnabled && country.status === "disabled") {
-      country.status = "active";
-    }
-    await country.save();
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: country.isEnabled
-        ? "country_enabled"
-        : "country_disabled",
-      data: country,
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: error.message,
-      error,
-    });
-  }
-};
-
 const deleteCountry = async (req, res) => {
   try {
     const recipeCount = await Recipe.countDocuments({
@@ -458,7 +418,6 @@ module.exports = {
   selectCountries,
   createCountry,
   updateCountry,
-  toggleCountry,
   deleteCountry,
   adminGetCountries,
 };

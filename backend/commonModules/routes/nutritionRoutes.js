@@ -6,12 +6,12 @@ const createRateLimiter = require("@utils/rateLimiter");
 const {
   getNutritionByRecipe,
   adminGetNutritions,
-  adminGetNutritionById,
   createNutrition,
   updateNutrition,
   deleteNutrition,
   getNutrition,
 } = require("../controllers/nutritionController");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
@@ -24,38 +24,12 @@ const deleteNutritionRateLimiter = createRateLimiter("deleteNutrition", 15, 15);
 router.get("/recipe/:recipeId", auth, getNutritionByRecipe);
 router.get("/baby", auth, getNutrition);
 
-// ─── CONTENT ADMIN + SUPER ADMIN ─────────────────────────────────────────────
+// ───ADMIN ─────────────────────────────────────────────
 
-router.get(
-  "/admin/all",
-  auth,
-  /**authorizeRoles("contentAdmin", "superAdmin"),**/ adminGetNutritions,
-);
-router.get(
-  "/admin/:id",
-  auth,
-  /**authorizeRoles("contentAdmin", "superAdmin"),**/ adminGetNutritionById,
-);
-router.post(
-  "/",
-  auth,
-  /**authorizeRoles("contentAdmin", "superAdmin"),**/ createNutritionRateLimiter,
-  createNutrition,
-);
-router.put(
-  "/:id",
-  auth,
-  /**authorizeRoles("contentAdmin", "superAdmin"),**/ updateNutritionRateLimiter,
-  updateNutrition,
-);
+router.get("/admin/all", auth, roleMiddleware(["admin"]), adminGetNutritions);
+router.post("/admin", auth, roleMiddleware(["admin"]), createNutritionRateLimiter, createNutrition);
+router.put("/admin/:id", auth, roleMiddleware(["admin"]), updateNutritionRateLimiter, updateNutrition);
 
-// ─── SUPER ADMIN ONLY ─────────────────────────────────────────────────────────
-
-router.delete(
-  "/:id",
-  auth,
-  /**authorizeRoles("superAdmin"),**/ deleteNutritionRateLimiter,
-  deleteNutrition,
-);
+router.delete("/admin/:id", auth, roleMiddleware(["admin"]), deleteNutritionRateLimiter, deleteNutrition);
 
 module.exports = router;

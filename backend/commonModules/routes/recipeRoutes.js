@@ -9,13 +9,14 @@ const {
   adminGetRecipes,
   createRecipe,
   updateRecipe,
-  updateRecipeStatus,
   deleteRecipe,
   getUserRecipes,
   getUserBabyRecipes,
   getBabyRecipes,
   getCustomCulturalPicks,
+  adminGetRecipeById,
 } = require("../controllers/RecipeController");
+const roleMiddleware = require("../../middlewares/roleMiddleware");
 
 const router = express.Router();
 
@@ -31,35 +32,28 @@ router.get("/admin/users/:userId/baby/:babyId", auth, getUserBabyRecipes);
 router.get("/cultural-picks", auth, getCustomCulturalPicks);
 router.get("/:id", auth, getRecipeById);
 
-// CONTENT ADMIN + SUPER ADMIN
-router.get(
-  "/admin/all",
-  auth,
-  /**authorizeRoles("contentAdmin", "superAdmin"),**/ adminGetRecipes,
-);
+// CONTENT ADMIN
+router.get("/admin/all", auth, roleMiddleware(["admin"]), adminGetRecipes);
 router.post(
-  "/",
+  "/admin",
   auth,
-  /**authorizeRoles("contentAdmin", "superAdmin"),**/ createRecipeRateLimiter,
+  roleMiddleware(["admin"]),
+  createRecipeRateLimiter,
   createRecipe,
 );
+router.get("/admin/:id", auth, roleMiddleware(["admin"]), adminGetRecipeById);
 router.put(
-  "/:id",
+  "/admin/:id",
   auth,
-  /**authorizeRoles("contentAdmin", "superAdmin"),**/ updateRecipeRateLimiter,
+  roleMiddleware(["admin"]),
+  updateRecipeRateLimiter,
   updateRecipe,
 );
-router.patch(
-  "/:id/status",
-  auth,
-  /**authorizeRoles("contentAdmin", "superAdmin", "nutritionReviewer"),**/ updateRecipeStatus,
-);
-
-// SUPER ADMIN ONLY
 router.delete(
-  "/:id",
+  "/admin/:id",
   auth,
-  /**authorizeRoles("superAdmin"),**/ deleteRecipeRateLimiter,
+  roleMiddleware(["admin"]),
+  deleteRecipeRateLimiter,
   deleteRecipe,
 );
 

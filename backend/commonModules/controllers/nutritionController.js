@@ -11,7 +11,6 @@ const {
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
-// Get nutrition facts & benefits for a recipe (nutrition page screen)
 const getNutritionByRecipe = async (req, res) => {
   try {
     if (
@@ -145,129 +144,104 @@ const getNutrition = async (req, res) => {
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 
-// Get all nutrition entries with pagination (admin)
 const adminGetNutritions = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
 
   try {
     const { search = "", status } = req.query;
 
-    const match = {};
+    const query = {};
 
-    if (status) {
-      match.status = status;
+    if (status) query.status = status;
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { benefit: { $regex: search, $options: "i" } },
+      ];
     }
 
-    const pipeline = [
-      {
-        $match: match,
-      },
-
-      {
-        $addFields: {
-          tagName: {
-            $arrayElemAt: ["$nutrients.name", 0],
-          },
-
-          benefit: {
-            $arrayElemAt: ["$nutrients.benefit", 0],
-          },
+    const [nutrients, totalRecords] = await Promise.all([
+      Nutrition.aggregate([
+        {
+          $match: query,
         },
-      },
 
-      {
-        $lookup: {
-          from: "recipes",
-
-          let: {
-            tag: "$tagName",
-          },
-
-          pipeline: [
-            {
-              $match: {
-                $expr: {
-                  $in: ["$$tag", "$nutritionTags"],
-                },
-              },
+        {
+          $lookup: {
+            from: "recipes",
+            let: {
+              nutritionId: "$_id",
             },
-          ],
 
-          as: "recipeDocs",
-        },
-      },
-
-      {
-        $addFields: {
-          recipes: {
-            $size: "$recipeDocs",
-          },
-        },
-      },
-
-      {
-        $match: {
-          ...(search && {
-            $or: [
+            pipeline: [
               {
-                tagName: {
-                  $regex: search,
-
-                  $options: "i",
+                $match: {
+                  $expr: {
+                    $in: ["$$nutritionId", "$nutritionTags"],
+                  },
                 },
               },
 
               {
-                benefit: {
-                  $regex: search,
-
-                  $options: "i",
-                },
+                $count: "count",
               },
             ],
-          }),
+
+            as: "recipeStats",
+          },
         },
-      },
 
-      {
-        $project: {
-          name: "$tagName",
-
-          benefit: 1,
-
-          recipes: 1,
-
-          status: 1,
+        {
+          $addFields: {
+            recipes: {
+              $ifNull: [
+                {
+                  $arrayElemAt: ["$recipeStats.count", 0],
+                },
+                0,
+              ],
+            },
+          },
         },
-      },
 
-      {
-        $sort: {
-          name: 1,
+        {
+          $project: {
+            name: 1,
+            benefit: 1,
+            status: 1,
+            isActive: 1,
+            recipes: 1,
+            createdAt: 1,
+            updatedAt: 1,
+          },
         },
-      },
 
-      {
-        $facet: {
-          data: [{ $skip: (page - 1) * limit }, { $limit: limit }],
-
-          total: [{ $count: "count" }],
+        {
+          $sort: {
+            name: 1,
+          },
         },
-      },
-    ];
 
-    const result = await Nutrition.aggregate(pipeline);
+        {
+          $skip: (page - 1) * limit,
+        },
 
-    const rows = result[0].data;
+        {
+          $limit: limit,
+        },
+      ]),
 
-    const totalRecords = result[0].total[0]?.count || 0;
+      Nutrition.countDocuments(query),
+    ]);
+
     const meta = generateMeta(page, limit, totalRecords);
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
-      data: rows,
+      data: nutrients,
       meta,
     });
   } catch (error) {
@@ -280,99 +254,23 @@ const adminGetNutritions = async (req, res) => {
   }
 };
 
-// Get single nutrition entry by ID (admin)
-const adminGetNutritionById = async (req, res) => {
-  try {
-    if (
-      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
-    )
-      return;
-
-    const nutrition = await Nutrition.findById(req.params.id).populate(
-      "recipe",
-      "title",
-    );
-
-    if (!nutrition) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "nutrition_not_found",
-      });
-    }
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "data_fetched_successfully",
-      data: nutrition,
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
-
-// Create nutrition entry for a recipe
+// Create nutrient
 const createNutrition = async (req, res) => {
   try {
     if (
       !validateParams(req, res, {
-        rawData: ["recipe", "nutrients"],
-        objectIdFields: ["recipe"],
+        rawData: ["name", "benefit"],
       })
     )
       return;
 
-    const { recipe, nutrients, feedingInsight, allergyReminder } = req.body;
-
-    const recipeDoc = await Recipe.findById(recipe);
-
-    if (!recipeDoc) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "recipe_not_found",
-      });
-    }
-
-    // Validate nutrient names exist in recipe tags
-    const recipeTags = recipeDoc.nutritionTags || [];
-
-    const invalidNutrients = nutrients.filter(
-      (n) => !recipeTags.includes(n.name),
-    );
-
-    if (invalidNutrients.length > 0) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "invalid_nutrition_tags",
-        data: {
-          invalidNutrients: invalidNutrients.map((n) => n.name),
-          allowedTags: recipeTags,
-        },
-      });
-    }
-
-    const existing = await Nutrition.findOne({ recipe });
-    if (existing) {
-      return sendResponse({
-        res,
-        statusCode: 409,
-        translationKey: "nutrition_already_exists",
-      });
-    }
+    const { name, benefit, status, isActive } = req.body;
 
     const nutrition = await Nutrition.create({
-      recipe,
-      nutrients,
-      feedingInsight: feedingInsight || "",
-      allergyReminder: allergyReminder || "",
+      name: name.trim(),
+      benefit: benefit.trim(),
+      status: status || "active",
+      isActive: isActive !== undefined ? isActive : true,
     });
 
     return sendResponse({
@@ -391,7 +289,7 @@ const createNutrition = async (req, res) => {
   }
 };
 
-// Update nutrition entry
+// Update nutrient
 const updateNutrition = async (req, res) => {
   try {
     if (
@@ -408,38 +306,23 @@ const updateNutrition = async (req, res) => {
       });
     }
 
-    const fields = [
-      "nutrients",
-      "feedingInsight",
-      "allergyReminder",
-      "isActive",
-    ];
+    const fields = ["name", "benefit", "status", "isActive"];
+
+    if (req.body.status) {
+      const allowedStatuses = ["active", "disabled"];
+
+      if (!allowedStatuses.includes(req.body.status)) {
+        return sendResponse({
+          res,
+          statusCode: 400,
+          translationKey: "invalid_status",
+        });
+      }
+    }
 
     fields.forEach((field) => {
       if (req.body[field] !== undefined) nutrition[field] = req.body[field];
     });
-
-    if (req.body.nutrients) {
-      const recipeDoc = await Recipe.findById(nutrition.recipe);
-
-      const recipeTags = recipeDoc.nutritionTags || [];
-
-      const invalidNutrients = req.body.nutrients.filter(
-        (n) => !recipeTags.includes(n.name),
-      );
-
-      if (invalidNutrients.length > 0) {
-        return sendResponse({
-          res,
-          statusCode: 400,
-          translationKey: "invalid_nutrition_tags",
-          data: {
-            invalidNutrients: invalidNutrients.map((n) => n.name),
-            allowedTags: recipeTags,
-          },
-        });
-      }
-    }
 
     await nutrition.save();
 
@@ -459,7 +342,7 @@ const updateNutrition = async (req, res) => {
   }
 };
 
-// Delete nutrition entry
+// Delete nutrient (blocked if any Recipe still references it)
 const deleteNutrition = async (req, res) => {
   try {
     if (
@@ -467,7 +350,7 @@ const deleteNutrition = async (req, res) => {
     )
       return;
 
-    const nutrition = await Nutrition.findByIdAndDelete(req.params.id);
+    const nutrition = await Nutrition.findById(req.params.id);
     if (!nutrition) {
       return sendResponse({
         res,
@@ -475,6 +358,20 @@ const deleteNutrition = async (req, res) => {
         translationKey: "nutrition_not_found",
       });
     }
+
+    const isInUse = await Recipe.exists({
+      nutritionTags: nutrition._id,
+    });
+
+    if (isInUse) {
+      return sendResponse({
+        res,
+        statusCode: 409,
+        translationKey: "nutrition_in_use",
+      });
+    }
+
+    await Nutrition.findByIdAndDelete(req.params.id);
 
     return sendResponse({
       res,
@@ -495,7 +392,6 @@ module.exports = {
   getNutritionByRecipe,
   getNutrition,
   adminGetNutritions,
-  adminGetNutritionById,
   createNutrition,
   updateNutrition,
   deleteNutrition,

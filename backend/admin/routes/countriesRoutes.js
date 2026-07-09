@@ -7,6 +7,7 @@ const {
   adminGetCountries,
   createCountry,
   updateCountry,
+  toggleCountry,
   deleteCountry,
 } = require("@controllersCommonModules/countriesController");
 
@@ -15,6 +16,7 @@ const router = express.Router();
 const createCountryRateLimiter = createRateLimiter("createCountry");
 const updateCountryRateLimiter = createRateLimiter("updateCountry");
 const deleteCountryRateLimiter = createRateLimiter("deleteCountry");
+const toggleCountryRateLimiter = createRateLimiter("toggleCountry");
 
 router.get("/", auth, roleMiddleware(["admin"]), adminGetCountries);
 

@@ -9,7 +9,6 @@ const {
   deleteFeedingSchedule,
   toggleSlotCompletion,
   removeScheduleSlot,
-  getScheduleSlotDetail,
   getUserFeedingSchedules,
   getUserBabyFeedingSchedule,
   startFeedingPlan,
@@ -24,7 +23,6 @@ const toggleLimiter = createRateLimiter("toggleSlotCompletion", 30, 15);
 
 router.get("/", auth, getFeedingSchedule);
 router.post("/", auth, createLimiter, createFeedingSchedule);
-router.get("/slot/:slotId", auth, getScheduleSlotDetail);
 router.get("/admin/user/:userId", auth, getUserFeedingSchedules);
 
 router.get(

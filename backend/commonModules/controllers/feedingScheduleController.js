@@ -49,7 +49,7 @@ const getFeedingSchedule = async (req, res) => {
         statusCode: 200,
         translationKey: "data_fetched_successfully",
         data: [],
-        meta: generateMeta(totalRecords, page, limit),
+        meta: generateMeta(page, limit, totalRecords),
       });
     }
 
@@ -76,49 +76,7 @@ const getFeedingSchedule = async (req, res) => {
       statusCode: 200,
       translationKey: "data_fetched_successfully",
       data: slots,
-      meta: generateMeta(totalRecords, page, limit),
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
-
-const getScheduleSlotDetail = async (req, res) => {
-  try {
-    const { slotId } = req.params;
-    const schedule = await FeedingSchedule.findOne({
-      user: req.user._id,
-
-      "slots._id": slotId,
-    });
-
-    if (!schedule.length) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "feeding_schedule_not_found",
-      });
-    }
-
-    const slot = schedule.slots.id(slotId);
-    if (!slot) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "feeding_slot_not_found",
-      });
-    }
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "data_fetched_successfully",
-      data: slot,
+      meta: generateMeta(page, limit, totalRecords),
     });
   } catch (error) {
     return sendResponse({
@@ -240,13 +198,12 @@ const createFeedingSchedule = async (req, res) => {
 const updateFeedingSchedule = async (req, res) => {
   try {
     if (
-      !validateParams(req, res, { pathParams: ["id"], objectIdFields: ["id"] })
+      !validateParams(req, res, {
+        pathParams: ["id"],
+        objectIdFields: ["id"],
+      })
     )
       return;
-
-    const { slots } = req.body;
-
-    schedule.slots = slots;
 
     const schedule = await FeedingSchedule.findOne({
       _id: req.params.id,
@@ -261,14 +218,32 @@ const updateFeedingSchedule = async (req, res) => {
       });
     }
 
-    if (weekSchedules !== undefined) schedule.weekSchedules = weekSchedules;
+    const { type, title, description, time, date, isOptional } = req.body;
+
+    if (type !== undefined) schedule.type = type;
+    if (title !== undefined) schedule.title = title;
+    if (description !== undefined) schedule.description = description;
+    if (time !== undefined) schedule.time = time;
+    if (date !== undefined) schedule.date = date;
+    if (isOptional !== undefined) schedule.isOptional = isOptional;
+
     await schedule.save();
 
     return sendResponse({
       res,
       statusCode: 200,
       translationKey: "feeding_schedule_updated_success",
-      data: schedule,
+      data: {
+        _id: schedule._id,
+        baby: schedule.baby,
+        user: schedule.user,
+        date: schedule.date,
+        type: schedule.type,
+        title: schedule.title,
+        description: schedule.description,
+        time: schedule.time,
+        isOptional: schedule.isOptional,
+      },
     });
   } catch (error) {
     return sendResponse({
@@ -556,7 +531,6 @@ module.exports = {
   getFeedingSchedule,
   getUserFeedingSchedules,
   getUserBabyFeedingSchedule,
-  getScheduleSlotDetail,
   removeScheduleSlot,
   createFeedingSchedule,
   updateFeedingSchedule,

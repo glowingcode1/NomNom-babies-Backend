@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const { User, SubscriptionType } = require("@models/UserModel");
 const moment = require("moment");
 const {
@@ -169,6 +170,7 @@ const getUserById = async (req, res) => {
         user: user._id,
       })
         .populate("selectedCountries", "_id name")
+        .populate("babyStage", "_id title")
         .lean(),
       Recipe.find({
         user: user._id,
@@ -207,30 +209,101 @@ const getUserById = async (req, res) => {
         .lean(),
     ]);
 
-    const timetables = feedingSchedules.map((schedule) => {
-      const logs = feedingLogs.filter(
-        (log) => log.schedule?.toString() === schedule._id.toString(),
-      );
+    const timetables = await FeedingSchedule.aggregate([
+      {
+        $match: {
+          user: new mongoose.Types.ObjectId(id),
+        },
+      },
 
-      return {
-        _id: schedule._id,
+      {
+        $lookup: {
+          from: "babies",
+          localField: "baby",
+          foreignField: "_id",
+          as: "baby",
+        },
+      },
+      {
+        $unwind: "$baby",
+      },
 
-        babyId: schedule.baby?._id,
+      {
+        $lookup: {
+          from: "feedinglogs",
+          let: {
+            slotId: "$_id",
+            babyId: "$baby._id",
+            userId: "$user",
+            date: "$date",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$slotId", "$$slotId"] },
+                    { $eq: ["$baby", "$$babyId"] },
+                    { $eq: ["$user", "$$userId"] },
+                    { $eq: ["$date", "$$date"] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: "feedingLog",
+        },
+      },
 
-        babyName: schedule.baby?.name || "",
+      {
+        $addFields: {
+          completed: {
+            $gt: [{ $size: "$feedingLog" }, 0],
+          },
+        },
+      },
 
-        recipeName: schedule.recipeName || "",
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
 
-        mealCount: logs.length,
+      {
+        $group: {
+          _id: {
+            baby: "$baby._id",
+            date: "$date",
+          },
+          babyId: { $first: "$baby._id" },
+          babyName: { $first: "$baby.name" },
+          date: { $first: "$date" },
+          createdAt: { $first: "$createdAt" },
 
-        schedule: logs.map((log) => ({
-          time: log.time,
-          meal: log.mealName,
-        })),
+          mealCount: {
+            $sum: 1,
+          },
 
-        createdAt: schedule.createdAt,
-      };
-    });
+          slots: {
+            $push: {
+              _id: "$_id",
+              type: "$type",
+              title: "$title",
+              description: "$description",
+              time: "$time",
+              isOptional: "$isOptional",
+              completed: "$completed",
+            },
+          },
+        },
+      },
+
+      {
+        $sort: {
+          createdAt: -1,
+        },
+      },
+    ]);
 
     return sendResponse({
       res,

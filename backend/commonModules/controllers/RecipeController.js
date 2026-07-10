@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Recipe = require("@models/Recipe");
 const Nutrition = require("@models/Nutrition");
 const {
@@ -11,7 +12,6 @@ const { User } = require("@models/UserModel");
 const { babyPopulate } = require("@utils/babyUtil");
 const FavoriteRecipe = require("@models/FavoriteRecipe");
 const GroceryList = require("@models/GroceryList");
-
 
 const validateNutritionTagIds = async (nutritionTags = []) => {
   if (!nutritionTags.length) return { valid: true };
@@ -724,7 +724,11 @@ const createRecipe = async (req, res) => {
     if (
       !validateParams(req, res, {
         rawData: ["title", "prepTime", "country", "babyStage", "nutritionTags"],
-        objectIdFields: ["country", "babyStage"],
+        objectIdFields: [
+          "country",
+          "babyStage",
+          ...(req.body.nutritionTags || []),
+        ],
       })
     )
       return;
@@ -823,6 +827,28 @@ const updateRecipe = async (req, res) => {
       "isActive",
     ];
 
+    if (
+      req.body.country &&
+      !mongoose.Types.ObjectId.isValid(req.body.country)
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_country",
+      });
+    }
+
+    if (
+      req.body.babyStage &&
+      !mongoose.Types.ObjectId.isValid(req.body.babyStage)
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_baby_stage",
+      });
+    }
+
     if (req.body.status) {
       const allowedStatuses = ["draft", "pending", "published", "archived"];
 
@@ -855,6 +881,11 @@ const updateRecipe = async (req, res) => {
     });
 
     await recipe.save();
+
+    // const updatedRecipe = await Recipe.findById(recipe._id)
+    //   .populate("country", "_id name")
+    //   .populate("babyStage", "_id title")
+    //   .populate("nutritionTags", "_id name benefit");
 
     return sendResponse({
       res,

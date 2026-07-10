@@ -48,7 +48,7 @@ const recipeSchema = new mongoose.Schema(
       {
         ingredientId: {
           type: mongoose.Schema.Types.ObjectId,
-          defaut: () => new mongoose.Types.ObjectId(),
+          default: () => new mongoose.Types.ObjectId(),
         },
         name: { type: String, required: true },
         quantity: { type: String, default: "" },

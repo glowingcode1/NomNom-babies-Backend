@@ -7,6 +7,7 @@ const {
   parsePaginationParams,
   generateMeta,
 } = require("@utils/responseUtil");
+const { logActivity } = require("@utils/activityUtil");
 
 const getCountries = async (req, res) => {
   const { page, limit } = parsePaginationParams(req);
@@ -130,6 +131,22 @@ const selectCountries = async (req, res) => {
       { new: true },
     ).populate("onboarding.selectedCountries", "_id name signatureFoods");
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType || req.user.accountState?.userType,
+      action: "Countries Selected",
+      detail: `Selected ${countries.length} Country`,
+      module: "country",
+      targetId: req.user._id,
+      metadata: {
+        countries: countries.map((country) => ({
+          id: country._id,
+          name: country.name,
+          code: country.code,
+        })),
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -175,6 +192,20 @@ const createCountry = async (req, res) => {
       status,
       isEnabled,
       signatureFoods,
+    });
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Country Created",
+      detail: `Created Country ${country.name}`,
+      module: "country",
+      targetId: country._id,
+      metadata: {
+        code: country.code,
+        status: country.status,
+        enabled: country.isEnabled,
+      },
     });
 
     return sendResponse({
@@ -236,6 +267,20 @@ const updateCountry = async (req, res) => {
       });
     }
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Country Updated",
+      detail: `Updated Country ${country.name}`,
+      module: "country",
+      targetId: country._id,
+      metadata: {
+        code: country.code,
+        status: country.status,
+        enabled: country.isEnabled,
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -275,6 +320,18 @@ const deleteCountry = async (req, res) => {
         translationKey: "country_not_found",
       });
     }
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Country Deleted",
+      detail: `Deleted Country ${country.name}`,
+      module: "country",
+      targetId: country._id,
+      metadata: {
+        code: country.code,
+      },
+    });
 
     return sendResponse({
       res,

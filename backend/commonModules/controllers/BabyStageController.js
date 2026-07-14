@@ -8,6 +8,7 @@ const {
   validateParams,
 } = require("@utils/responseUtil");
 const Recipe = require("@models/Recipe");
+const { logActivity } = require("@utils/activityUtil");
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -119,6 +120,20 @@ const selectBabyStage = async (req, res) => {
     await user.save();
 
     await baby.populate("babyStage", "title features");
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Baby Stage Selected",
+      detail: `Selected BabyStage ${stage.title} for baby ${baby.name}`,
+      module: "baby_stage",
+      baby: baby._id,
+      targetId: stage._id,
+      metadata: {
+        babyName: baby.name,
+        stageTitle: stage.title,
+      },
+    });
 
     return sendResponse({
       res,
@@ -260,6 +275,19 @@ const createBabyStage = async (req, res) => {
     const stage = new BabyStage({ title: title.trim(), features });
     await stage.save();
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Baby Stage Created",
+      detail: `Created BabyStage ${stage.title}`,
+      module: "baby_stage",
+      targetId: stage._id,
+      metadata: {
+        active: stage.active,
+        featuresCount: stage.features.length,
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 201,
@@ -311,6 +339,19 @@ const updateBabyStage = async (req, res) => {
 
     await stage.save();
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Baby Stage Updated",
+      detail: `Updated BabyStage ${stage.title}`,
+      module: "baby_stage",
+      targetId: stage._id,
+      metadata: {
+        active: stage.active,
+        featuresCount: stage.features.length,
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -357,6 +398,19 @@ const deleteBabyStage = async (req, res) => {
         translationKey: "baby_stage_not_found",
       });
     }
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Baby Stage Deleted",
+      detail: `Deleted BabyStage ${stage.title}`,
+      module: "baby_stage",
+      targetId: stage._id,
+      metadata: {
+        active: stage.active,
+        featuresCount: stage.features.length,
+      },
+    });
 
     return sendResponse({
       res,

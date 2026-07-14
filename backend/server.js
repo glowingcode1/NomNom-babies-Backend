@@ -10,6 +10,8 @@ const {
   accessLogger,
 } = require("../backend/config/logging");
 
+const cors = require("cors");
+
 // expose globally (safe + intentional)
 global.logger = logger;
 
@@ -156,6 +158,9 @@ securityMiddleware(app, {
  * Middlewares
  * =======================================================
  */
+
+app.use(cors());
+
 app.use(i18nConfig.init);
 
 // ✅ unified access logs

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const groceryIngredientSchema = new mongoose.Schema({
-  ingredient: {
+  ingredientId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
   },

@@ -5,6 +5,7 @@ const {
   generateMeta,
 } = require("@utils/responseUtil");
 const Faq = require("@models/Faq");
+const { logActivity } = require("@utils/activityUtil");
 
 const getSettingByKey = async (key) => {
   return await AdminSettings.findOne({ key });
@@ -142,6 +143,18 @@ const updateAboutUs = async (req, res) => {
       { key: "aboutUs", title, content },
       { new: true, upsert: true },
     );
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType,
+      action: "update",
+      detail: "Updated About Us settings",
+      module: "settings",
+      targetId: settings._id,
+      metadata: {
+        key: settings.key,
+        title: settings.title,
+      },
+    });
     return sendResponse({
       res,
       statusCode: 200,
@@ -167,6 +180,18 @@ const updatePrivacyPolicy = async (req, res) => {
       { key: "privacyPolicy", title, content },
       { new: true, upsert: true },
     );
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType,
+      action: "update",
+      detail: "Updated Privacy Policy",
+      module: "settings",
+      targetId: settings._id,
+      metadata: {
+        key: settings.key,
+        title: settings.title,
+      },
+    });
     return sendResponse({
       res,
       statusCode: 200,
@@ -192,6 +217,18 @@ const updateTermsAndConditions = async (req, res) => {
       { key: "termsConditions", title, content },
       { new: true, upsert: true },
     );
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType,
+      action: "update",
+      detail: "Updated Terms and Conditions",
+      module: "settings",
+      targetId: settings._id,
+      metadata: {
+        key: settings.key,
+        title: settings.title,
+      },
+    });
     return sendResponse({
       res,
       statusCode: 200,
@@ -214,6 +251,17 @@ const updateFaqs = async (req, res) => {
     const faq = await Faq.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
     });
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType,
+      action: "update",
+      detail: `Updated FAQ ${faq.question}`,
+      module: "faq",
+      targetId: faq._id,
+      metadata: {
+        question: faq.question,
+      },
+    });
     return sendResponse({
       res,
       statusCode: 200,
@@ -234,6 +282,19 @@ const updateFaqs = async (req, res) => {
 const deleteFaqs = async (req, res) => {
   try {
     const faq = await Faq.findByIdAndDelete(req.params.id);
+    if (faq) {
+      await logActivity({
+        user: req.user._id,
+        userType: req.user.userType,
+        action: "delete",
+        detail: `Deleted FAQ ${faq.question}`,
+        module: "faq",
+        targetId: faq._id,
+        metadata: {
+          question: faq.question,
+        },
+      });
+    }
     return sendResponse({
       res,
       statusCode: 200,
@@ -257,6 +318,17 @@ const createFaqs = async (req, res) => {
     const faq = await Faq.create({
       question,
       answer,
+    });
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType,
+      action: "create",
+      detail: `Created FAQ ${faq.question}`,
+      module: "faq",
+      targetId: faq._id,
+      metadata: {
+        question: faq.question,
+      },
     });
     return sendResponse({
       res,

@@ -8,6 +8,7 @@ const {
   parsePaginationParams,
   generateMeta,
 } = require("@utils/responseUtil");
+const { logActivity } = require("@utils/activityUtil");
 
 // ─── PUBLIC ───────────────────────────────────────────────────────────────────
 
@@ -273,6 +274,20 @@ const createNutrition = async (req, res) => {
       isActive: isActive !== undefined ? isActive : true,
     });
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Nutrition Created",
+      detail: `Created Nutrition ${nutrition.name}`,
+      module: "nutrition",
+      targetId: nutrition._id,
+      metadata: {
+        benefit: nutrition.benefit,
+        status: nutrition.status,
+        isActive: nutrition.isActive,
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 201,
@@ -326,6 +341,20 @@ const updateNutrition = async (req, res) => {
 
     await nutrition.save();
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Nutrition Updated",
+      detail: `Updated Nutrition ${nutrition.name}`,
+      module: "nutrition",
+      targetId: nutrition._id,
+      metadata: {
+        benefit: nutrition.benefit,
+        status: nutrition.status,
+        isActive: nutrition.isActive,
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -372,6 +401,19 @@ const deleteNutrition = async (req, res) => {
     }
 
     await Nutrition.findByIdAndDelete(req.params.id);
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Nutrition Deleted",
+      detail: `Deleted Nutrition ${nutrition.name}`,
+      module: "nutrition",
+      targetId: nutrition._id,
+      metadata: {
+        benefit: nutrition.benefit,
+        status: nutrition.status,
+      },
+    });
 
     return sendResponse({
       res,

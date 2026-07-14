@@ -4,7 +4,6 @@ const {
   getLanguages,
   updateLanguage,
   deleteLanguage,
-  updateUserLanguage,
 } = require('../controllers/languageController');
 const auth = require('../../middlewares/authMiddleware');
 const roleMiddleware = require('../../middlewares/roleMiddleware');
@@ -17,9 +16,6 @@ router.post('/',roleMiddleware(["admin"]), createLanguage);
 
 // Get all languages with pagination
 router.get('/', getLanguages);
-
-// Update user's preferred language
-router.put('/user', updateUserLanguage);
 
 // Update an existing language
 router.put('/:id',roleMiddleware(["admin"]), updateLanguage);

@@ -9,6 +9,7 @@ const {
   generateMeta,
 } = require("@utils/responseUtil");
 const { getBabyInfo, babyPopulate } = require("@utils/babyUtil");
+const { logActivity } = require("@utils/activityUtil");
 
 // Create a new baby profile
 const createBaby = async (req, res) => {
@@ -84,6 +85,21 @@ const createBaby = async (req, res) => {
       { path: "babyStage", select: "_id title features" },
       { path: "selectedCountries", select: "_id name signatureFoods" },
     ]);
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Baby Created",
+      detail: `Created Baby Profile ${baby.name}`,
+      module: "baby",
+      baby: baby._id,
+      targetId: baby._id,
+      metadata: {
+        profileIcon: baby.profileIcon,
+        stage: baby.babyStage?._id,
+        selectedCountries: baby.selectedCountries.map((country) => country._id),
+      },
+    });
 
     return sendResponse({
       res,
@@ -296,6 +312,23 @@ const updateBaby = async (req, res) => {
     await baby.save();
     await baby.populate(babyPopulate);
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Baby Updated",
+      detail: `Updated Baby Profile ${baby.name}`,
+      module: "baby",
+      baby: baby._id,
+      targetId: baby._id,
+      metadata: {
+        profileIcon: baby.profileIcon,
+        stage: baby.babyStage?._id,
+        selectedCountries: baby.selectedCountries.map(
+          (country) => country._id || country,
+        ),
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -331,6 +364,19 @@ const deleteBaby = async (req, res) => {
 
     baby.isActive = false;
     await baby.save();
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Baby Deleted",
+      detail: `Deleted Baby Profile ${baby.name}`,
+      module: "baby",
+      baby: baby._id,
+      targetId: baby._id,
+      metadata: {
+        isActive: baby.isActive,
+      },
+    });
 
     // If deleted baby was the active one, switch to another
     const user = await User.findById(req.user._id);
@@ -388,6 +434,19 @@ const switchActiveBaby = async (req, res) => {
     await User.findByIdAndUpdate(req.user._id, { activeBaby: baby._id });
 
     await baby.populate(babyPopulate);
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Active Baby Switched",
+      detail: `Switched Active Baby to ${baby.name}`,
+      module: "baby",
+      baby: baby._id,
+      targetId: baby._id,
+      metadata: {
+        stage: baby.babyStage?._id,
+      },
+    });
     return sendResponse({
       res,
       statusCode: 200,

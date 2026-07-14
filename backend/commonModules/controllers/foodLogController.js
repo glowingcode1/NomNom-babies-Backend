@@ -6,6 +6,7 @@ const {
 } = require("@utils/responseUtil");
 const { User } = require("@models/UserModel");
 const FoodLog = require("@models/FoodLog");
+const { logActivity } = require("@utils/activityUtil");
 
 const createFoodLog = async (req, res) => {
   try {
@@ -36,6 +37,22 @@ const createFoodLog = async (req, res) => {
       description: req.body.description,
       date: today,
     });
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.role || "user",
+      action: "create",
+      detail: `Created food log for ${log.foodName}`,
+      module: "food_log",
+      baby: user.activeBaby,
+      targetId: log._id,
+      metadata: {
+        foodName: log.foodName,
+        day: log.day,
+        date: log.date,
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 201,
@@ -123,6 +140,25 @@ const toggleFoodLogCompletion = async (req, res) => {
     log.completed = !log.completed;
 
     await log.save();
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.role || "user",
+      action: log.completed ? "complete" : "uncomplete",
+      detail: `${
+        log.completed ? "Completed" : "Marked incomplete"
+      } food log ${log.foodName}`,
+      module: "food_log",
+      baby: log.baby,
+      targetId: log._id,
+      metadata: {
+        foodName: log.foodName,
+        completed: log.completed,
+        badgeEarned: log.badgeEarned,
+        day: log.day,
+        date: log.date,
+      },
+    });
 
     return sendResponse({
       res,

@@ -7,20 +7,17 @@ const formatUserResponse = (
   userObject,
   token = null,
   includeFields = [],
-  excludeFields = []
+  excludeFields = [],
 ) => {
   var pIcon = null;
-  if (
-    userObject.profileIcon
-  ) {
+  if (userObject.profileIcon) {
     pIcon = userObject.profileIcon;
   }
 
   // Attach base URL to profileIcon
   if (pIcon) {
-    pIcon  = getFullImageUrl(pIcon);
+    pIcon = getFullImageUrl(pIcon);
   }
-
 
   const response = {
     basicInfo: {
@@ -34,9 +31,15 @@ const formatUserResponse = (
     },
     accountState: {
       userType:
-        userObject.accountState?.userType || userObject.role || userObject.userType || "parent",
+        userObject.accountState?.userType ||
+        userObject.role ||
+        userObject.userType ||
+        "parent",
       role:
-        userObject.accountState?.userType || userObject.role || userObject.userType || "parent",
+        userObject.accountState?.userType ||
+        userObject.role ||
+        userObject.userType ||
+        "parent",
       status: userObject.accountState?.status || "active",
       verificationStatus: userObject.verificationStatus || {
         email: "pending",
@@ -61,12 +64,12 @@ const formatUserResponse = (
   if (userObject.otpInfo && userObject.otpInfo.otpExpires) {
     otpExpLocalTz = convertUtcToTimezone(
       userObject.otpInfo.otpExpires,
-      userObject.timezone
+      userObject.timezone,
     );
   }
 
   if (process.env.NODE_ENV === "dev" && userObject.otpInfo) {
-    response.otpInfo = userObject.otpInfo
+    response.otpInfo = userObject.otpInfo;
   }
   if (userObject.resetToken) {
     response.resetToken = userObject.resetToken;

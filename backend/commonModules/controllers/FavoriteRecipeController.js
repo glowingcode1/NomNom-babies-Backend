@@ -7,6 +7,7 @@ const {
   parsePaginationParams,
   generateMeta,
 } = require("@utils/responseUtil");
+const { logActivity } = require("@utils/activityUtil");
 
 // Add recipe to favorites
 const addFavorite = async (req, res) => {
@@ -68,6 +69,20 @@ const addFavorite = async (req, res) => {
       recipe: recipeId,
     });
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Recipe Favorited",
+      detail: `Added recipe ${recipe.title} to favorites`,
+      module: "favorite_recipe",
+      baby: user.activeBaby,
+      targetId: recipe._id,
+      metadata: {
+        recipeId: recipe._id,
+        recipeTitle: recipe.title,
+      },
+    });
+
     return sendResponse({
       res,
 
@@ -116,6 +131,8 @@ const removeFavorite = async (req, res) => {
       });
     }
 
+    const recipe = await Recipe.findById(recipeId).select("title");
+
     const favorite = await FavoriteRecipe.findOneAndDelete({
       user: userId,
 
@@ -133,6 +150,20 @@ const removeFavorite = async (req, res) => {
         translationKey: "favorite_not_found",
       });
     }
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Recipe Unfavorited",
+      detail: `Removed recipe ${recipe?.title || "Unknown"} from favorites`,
+      module: "favorite_recipe",
+      baby: user.activeBaby,
+      targetId: recipeId,
+      metadata: {
+        recipeId,
+        recipeTitle: recipe?.title || null,
+      },
+    });
 
     return sendResponse({
       res,

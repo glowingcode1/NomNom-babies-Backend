@@ -13,6 +13,7 @@ const { createOrSkipDevice, Devices } = require("@models/Devices");
 const validator = require("validator");
 const bcrypt = require("bcryptjs");
 const { babyPopulate, getBabyInfo } = require("@utils/babyUtil");
+const { logActivity } = require("@utils/activityUtil");
 
 const normalizeRole = (role) => {
   if (!role) {
@@ -147,6 +148,15 @@ const register = async (req, res) => {
 
         const response = await getFormattedUserResponse(existingUser, token);
 
+        logActivity({
+          user: existingUser._id,
+          userType: existingUser.accountState.userType,
+          action: "User Signed Up",
+          detail: `${existingUser.name} re-submitted signup (pending verification)`,
+          module: "auth",
+          targetId: existingUser._id,
+        });
+
         return sendResponse({
           res,
 
@@ -190,6 +200,15 @@ const register = async (req, res) => {
 
     const token = user.generateAuthToken();
     const response = await getFormattedUserResponse(user, token);
+
+    logActivity({
+      user: user._id,
+      userType: user.accountState.userType,
+      action: isAdminSignup ? "Admin Signed Up" : "User Signed Up",
+      detail: `${user.name} created a${isAdminSignup ? "n admin" : ""} account`,
+      module: "auth",
+      targetId: user._id,
+    });
 
     return sendResponse({
       res,
@@ -321,6 +340,18 @@ const login = async (req, res) => {
     response.babyInfo = activeBaby ? getBabyInfo(activeBaby) : null;
 
     response.hasBaby = !!activeBaby;
+
+    logActivity({
+      user: user._id,
+      userType: user.accountState.userType,
+      action:
+        user.accountState.userType === "admin"
+          ? "Admin Logged In"
+          : "User Logged In",
+      detail: `${user.name} logged in`,
+      module: "auth",
+      targetId: user._id,
+    });
 
     return sendResponse({
       res,
@@ -707,6 +738,15 @@ const resetPassword = async (req, res) => {
     // Format the user response using the utility function
     const response = formatUserResponse(updatedUser, token);
 
+    logActivity({
+      user: user._id,
+      userType: user.accountState.userType,
+      action: "Password Reset",
+      detail: `${user.name} reset their password via OTP`,
+      module: "auth",
+      targetId: user._id,
+    });
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -777,6 +817,15 @@ const deleteAccount = async (req, res) => {
       { $set: { devices: [] } }, // This will empty the array of devices for the user
     );
 
+    logActivity({
+      user: userId,
+      userType,
+      action: "Account Deleted",
+      detail: `${email} deleted their account`,
+      module: "auth",
+      targetId: userId,
+    });
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -793,15 +842,8 @@ const deleteAccount = async (req, res) => {
 };
 
 const socialAuth = async (req, res) => {
-  const {
-    provider,
-    socialId,
-    email,
-    name,
-    deviceId,
-    deviceType,
-    timezone,
-  } = req.body;
+  const { provider, socialId, email, name, deviceId, deviceType, timezone } =
+    req.body;
   // const session = await mongoose.startSession();
   // session.startTransaction();
 
@@ -886,6 +928,16 @@ const socialAuth = async (req, res) => {
       response.babyInfo = activeBaby ? getBabyInfo(activeBaby) : null;
       response.hasBaby = !!activeBaby;
 
+      logActivity({
+        user: existingUser._id,
+        userType: existingUser.accountState.userType,
+        action: "User Logged In",
+        detail: `${existingUser.name} logged in via ${provider}${providerLinked ? " (newly linked)" : ""}`,
+        module: "auth",
+        targetId: existingUser._id,
+        metadata: { provider },
+      });
+
       // await session.commitTransaction();
       // session.endSession();
 
@@ -926,6 +978,16 @@ const socialAuth = async (req, res) => {
       response.babyInfo = null;
       response.hasBaby = false;
 
+      logActivity({
+        user: newUser._id,
+        userType: newUser.accountState.userType,
+        action: "User Signed Up",
+        detail: `${newUser.name} signed up via ${provider}`,
+        module: "auth",
+        targetId: newUser._id,
+        metadata: { provider },
+      });
+
       // await session.commitTransaction();
       // session.endSession();
 
@@ -952,25 +1014,17 @@ const socialAuth = async (req, res) => {
 // change-password
 const changePassword = async (req, res) => {
   try {
-    const { newPassword, confirmPassword } = req.body;
+    const { currentPassword, newPassword } = req.body;
 
     if (
       !validateParams(req, res, {
-        rawData: ["newPassword", "confirmPassword"],
+        rawData: ["currentPassword", "newPassword"],
         minLengthFields: {
           newPassword: 6,
         },
       })
     )
       return;
-
-    if (newPassword !== confirmPassword) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "passwords_do_not_match",
-      });
-    }
 
     const user = await User.findById(req.user._id);
 
@@ -979,6 +1033,19 @@ const changePassword = async (req, res) => {
         res,
         statusCode: 404,
         translationKey: "user_not_found",
+      });
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.password,
+    );
+
+    if (!isCurrentPasswordValid) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "current_password_incorrect",
       });
     }
 
@@ -996,6 +1063,15 @@ const changePassword = async (req, res) => {
     user.password = newPassword;
 
     await user.save();
+
+    logActivity({
+      user: user._id,
+      userType: user.accountState.userType,
+      action: "Password Changed",
+      detail: `${user.name} changed their password`,
+      module: "auth",
+      targetId: user._id,
+    });
 
     return sendResponse({
       res,

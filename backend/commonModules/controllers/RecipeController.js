@@ -12,6 +12,7 @@ const { User } = require("@models/UserModel");
 const { babyPopulate } = require("@utils/babyUtil");
 const FavoriteRecipe = require("@models/FavoriteRecipe");
 const GroceryList = require("@models/GroceryList");
+const { logActivity } = require("@utils/activityUtil");
 
 const validateNutritionTagIds = async (nutritionTags = []) => {
   if (!nutritionTags.length) return { valid: true };
@@ -290,12 +291,6 @@ const getRecipeById = async (req, res) => {
       isFavorite,
 
       isAddedToGroceryList,
-
-      actions: {
-        nutritionFacts: true,
-        downloadPdf: true,
-        addToGroceryList: true,
-      },
     });
 
     return sendResponse({
@@ -776,6 +771,22 @@ const createRecipe = async (req, res) => {
       acceptanceLabel: acceptanceLabel || "",
     });
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Recipe Created",
+      detail: `Created Recipe ${recipe.title}`,
+      module: "recipe",
+      targetId: recipe._id,
+      metadata: {
+        country: recipe.country,
+        babyStage: recipe.babyStage,
+        mealType: recipe.mealType,
+        status: recipe.status,
+        isActive: recipe.isActive,
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 201,
@@ -882,6 +893,22 @@ const updateRecipe = async (req, res) => {
 
     await recipe.save();
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Recipe Updated",
+      detail: `Updated Recipe ${recipe.title}`,
+      module: "recipe",
+      targetId: recipe._id,
+      metadata: {
+        country: recipe.country,
+        babyStage: recipe.babyStage,
+        mealType: recipe.mealType,
+        status: recipe.status,
+        isActive: recipe.isActive,
+      },
+    });
+
     // const updatedRecipe = await Recipe.findById(recipe._id)
     //   .populate("country", "_id name")
     //   .populate("babyStage", "_id title")
@@ -919,6 +946,21 @@ const deleteRecipe = async (req, res) => {
         translationKey: "recipe_not_found",
       });
     }
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.userType ?? req.user.accountState?.userType,
+      action: "Recipe Deleted",
+      detail: `Deleted Recipe ${recipe.title}`,
+      module: "recipe",
+      targetId: recipe._id,
+      metadata: {
+        country: recipe.country,
+        babyStage: recipe.babyStage,
+        mealType: recipe.mealType,
+        status: recipe.status,
+      },
+    });
 
     return sendResponse({
       res,

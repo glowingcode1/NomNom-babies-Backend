@@ -9,6 +9,7 @@ const {
 const Baby = require("@models/Baby");
 const mongoose = require("mongoose");
 const { User } = require("@models/UserModel");
+const { logActivity } = require("@utils/activityUtil");
 
 // Get feeding schedule for active baby on a given date
 const getFeedingSchedule = async (req, res) => {
@@ -168,6 +169,22 @@ const createFeedingSchedule = async (req, res) => {
       date: today,
     });
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.role || "user",
+      action: "create",
+      detail: `Created feeding schedule ${title}`,
+      module: "feeding_schedule",
+      baby: user.activeBaby,
+      targetId: schedule._id,
+      metadata: {
+        type,
+        title,
+        time,
+        date: today,
+      },
+    });
+
     const scheduleResponse = {
       _id: schedule._id,
       type: schedule.type,
@@ -229,6 +246,22 @@ const updateFeedingSchedule = async (req, res) => {
 
     await schedule.save();
 
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.role || "user",
+      action: "update",
+      detail: `Updated feeding schedule ${schedule.title}`,
+      module: "feeding_schedule",
+      baby: schedule.baby,
+      targetId: schedule._id,
+      metadata: {
+        type: schedule.type,
+        title: schedule.title,
+        time: schedule.time,
+        date: schedule.date,
+      },
+    });
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -275,6 +308,22 @@ const deleteFeedingSchedule = async (req, res) => {
         translationKey: "feeding_schedule_not_found",
       });
     }
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.role || "user",
+      action: "delete",
+      detail: `Deleted feeding schedule ${schedule.title}`,
+      module: "feeding_schedule",
+      baby: schedule.baby,
+      targetId: schedule._id,
+      metadata: {
+        type: schedule.type,
+        title: schedule.title,
+        time: schedule.time,
+        date: schedule.date,
+      },
+    });
 
     return sendResponse({
       res,
@@ -432,6 +481,20 @@ const toggleSlotCompletion = async (req, res) => {
     if (existing) {
       await existing.deleteOne();
 
+      await logActivity({
+        user: req.user._id,
+        userType: req.user.role || "user",
+        action: "uncomplete",
+        detail: `Unmarked feeding slot ${slot.title}`,
+        module: "feeding_schedule",
+        baby: user.activeBaby,
+        targetId: slot._id,
+        metadata: {
+          date: slot.date,
+          time: slot.time,
+        },
+      });
+
       return sendResponse({
         res,
 
@@ -457,6 +520,20 @@ const toggleSlotCompletion = async (req, res) => {
       date: slot.date,
 
       completed: true,
+    });
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.role || "user",
+      action: "complete",
+      detail: `Completed feeding slot ${slot.title}`,
+      module: "feeding_schedule",
+      baby: user.activeBaby,
+      targetId: slot._id,
+      metadata: {
+        date: slot.date,
+        time: slot.time,
+      },
     });
 
     return sendResponse({
@@ -506,6 +583,19 @@ const startFeedingPlan = async (req, res) => {
     baby.feedingPlanStartedAt = new Date();
 
     await baby.save();
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.role || "user",
+      action: "start",
+      detail: "Started feeding plan",
+      module: "feeding_plan",
+      baby: baby._id,
+      targetId: baby._id,
+      metadata: {
+        startedAt: baby.feedingPlanStartedAt,
+      },
+    });
 
     return sendResponse({
       res,

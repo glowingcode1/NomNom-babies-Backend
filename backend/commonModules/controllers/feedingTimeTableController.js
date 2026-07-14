@@ -9,6 +9,7 @@ const {
   validateParams,
 } = require("@utils/responseUtil");
 const { getBabyInfo, babyPopulate } = require("@utils/babyUtil");
+const { logActivity } = require("@utils/activityUtil");
 
 const getFeedingTimetable = async (req, res) => {
   try {
@@ -244,10 +245,32 @@ const deleteTimetable = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
 
+    const { date } = req.query;
+
+    const schedules = await FeedingSchedule.find({
+      baby: user.activeBaby,
+      user: req.user._id,
+      date,
+    });
+
     await FeedingSchedule.deleteMany({
       baby: user.activeBaby,
       user: req.user._id,
       date: req.query.date,
+    });
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.role || "user",
+      action: "delete",
+      detail: `Deleted feeding timetable for ${date}`,
+      module: "feeding_timetable",
+      baby: user.activeBaby,
+      targetId: user.activeBaby,
+      metadata: {
+        date,
+        deletedSlots: schedules.length,
+      },
     });
 
     return sendResponse({

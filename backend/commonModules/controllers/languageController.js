@@ -7,53 +7,7 @@ const {
   validateParams,
 } = require("@utils/responseUtil");
 const { userCache } = require("@config/nodeCache");
-
-// Create a new language
-const createLanguage = async (req, res) => {
-  const { title, image, transliteration, flag, code } = req.body;
-
-  try {
-    //validate params
-    const validationOptions = {
-      rawData: ["title", "transliteration", "code"],
-    };
-
-    if (!validateParams(req, res, validationOptions)) {
-      return;
-    }
-
-    const language = new Language({
-      title,
-      image,
-      transliteration,
-      flag,
-      code,
-    });
-    await language.save();
-
-    return sendResponse({
-      res,
-      statusCode: 201,
-      translationKey: "language_created_success", // Translation key for success
-      data: language,
-    });
-  } catch (error) {
-    if (error.code === 11000) {
-      return sendResponse({
-        res,
-        statusCode: 400,
-        translationKey: "language_code_unique_violation", // Custom translation key for duplicate language code
-        error,
-      });
-    }
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
+const { logActivity } = require("@utils/activityUtil");
 
 // Get all languages with pagination
 const getLanguages = async (req, res) => {
@@ -87,114 +41,10 @@ const getLanguages = async (req, res) => {
   }
 };
 
-// Update an existing language
-const updateLanguage = async (req, res) => {
-  const { id } = req.params;
-  const { title, image, transliteration, flag, code, active } = req.body;
-  try {
-    const validationOptions = {
-      pathParams: ["id"],
-      objectIdFields: ["id"],
-    };
-
-    if (!validateParams(req, res, validationOptions)) {
-      return;
-    }
-    const language = await Language.findById(id);
-    if (!language) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "language_not_found",
-      });
-    }
-
-    language.title = title || language.title;
-    language.image = image || language.image;
-    language.transliteration = transliteration || language.transliteration;
-    language.flag = flag || language.flag;
-    language.code = code || language.code;
-    if (active !== undefined) {
-      language.active = active;
-    }
-
-    await language.save();
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "language_updated_success",
-      data: language,
-    });
-  } catch (error) {
-    // Handle validation errors from Mongoose
-    const statusCode = error.name === "ValidationError" ? 400 : 500;
-    const translationKey =
-      error.name === "ValidationError"
-        ? Object.values(error.errors)[0].message
-        : error.message;
-
-    return sendResponse({
-      res,
-      statusCode,
-      translationKey,
-      error,
-    });
-  }
-};
-
-// Delete a language by ID
-const deleteLanguage = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const validationOptions = {
-      pathParams: ["id"],
-      objectIdFields: ["id"],
-    };
-
-    if (!validateParams(req, res, validationOptions)) {
-      return;
-    }
-    const language = await Language.findById(id);
-    if (!language) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "language_not_found",
-      });
-    }
-
-    await language.deleteOne();
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "language_deleted_success",
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
-
 // Update a user's preferred language
 const updateUserLanguage = async (req, res) => {
   const { _id: userId } = req.user;
   const { languageId } = req.body;
-
-  const validationOptions = {
-    rawData: ["languageId"],
-    objectIdFields: ["languageId"],
-  };
-
-  if (!validateParams(req, res, validationOptions)) {
-    return;
-  }
 
   try {
     const user = await User.findById(userId);
@@ -217,6 +67,17 @@ const updateUserLanguage = async (req, res) => {
 
     user.language = language.code;
     await user.save();
+    await logActivity({
+      user: user._id,
+      userType: user.userType,
+      action: "Language Preference Updated",
+      detail: `${user.name} changed preferred language to "${language.title}"`,
+      module: "language",
+      targetId: user._id,
+      metadata: {
+        languageCode: language.code,
+      },
+    });
     userCache.del(userId.toString());
     return sendResponse({
       res,
@@ -235,9 +96,6 @@ const updateUserLanguage = async (req, res) => {
 };
 
 module.exports = {
-  createLanguage,
   getLanguages,
-  updateLanguage,
-  deleteLanguage,
   updateUserLanguage,
 };

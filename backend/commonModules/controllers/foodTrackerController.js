@@ -6,26 +6,51 @@ const {
   sendResponse,
   validateParams,
 } = require("@utils/responseUtil");
+const { logActivity } = require("@utils/activityUtil");
 
 const createFoodTracker = async (req, res) => {
   try {
     if (
       !validateParams(req, res, {
-        rawData: ["baby", "ingredientName", "date", "reaction"],
+        rawData: ["ingredientName", "date", "reaction"],
       })
     ) {
       return;
     }
 
-    const { image, baby, ingredientName, date, reaction } = req.body;
+    const { ingredientName, date, reaction } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (!user?.activeBaby) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "baby_not_found",
+      });
+    }
 
     const foodTracker = await FoodTracker.create({
-      image,
-      baby,
+      baby: user.activeBaby,
       user: req.user._id,
       ingredientName,
       date,
       reaction,
+    });
+
+    await logActivity({
+      user: req.user._id,
+      userType: req.user.role || "user",
+      action: "create",
+      detail: `Added food tracker entry for ${ingredientName}`,
+      module: "food_tracker",
+      baby: user.activeBaby,
+      targetId: foodTracker._id,
+      metadata: {
+        ingredientName,
+        date,
+        reaction,
+      },
     });
 
     return sendResponse({
@@ -87,8 +112,8 @@ const getFoodTracker = async (req, res) => {
     return sendResponse({
       res,
       statusCode: 500,
-      translationKey: error.message,
-      error,
+      translationKey: "internal_server",
+      error: error.message,
     });
   }
 };

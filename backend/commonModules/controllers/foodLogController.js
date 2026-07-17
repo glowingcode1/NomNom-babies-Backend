@@ -38,7 +38,7 @@ const createFoodLog = async (req, res) => {
       date: today,
     });
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.role || "user",
       action: "create",
@@ -141,7 +141,7 @@ const toggleFoodLogCompletion = async (req, res) => {
 
     await log.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.role || "user",
       action: log.completed ? "complete" : "uncomplete",

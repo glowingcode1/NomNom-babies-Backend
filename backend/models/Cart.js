@@ -2,12 +2,27 @@ const mongoose = require("mongoose");
 
 const cartIngredientSchema = new mongoose.Schema(
   {
+    ingredientId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: () => new mongoose.Types.ObjectId(),
+    },
+
     name: {
       type: String,
       required: true,
     },
 
     quantity: {
+      type: String,
+      default: "",
+    },
+
+    icon: {
+      type: String,
+      default: "",
+    },
+
+    category: {
       type: String,
       default: "",
     },
@@ -23,7 +38,6 @@ const cartIngredientSchema = new mongoose.Schema(
       default: "recipe",
     },
   },
-
   {
     _id: true,
   },

@@ -29,7 +29,7 @@ const createSupportRequest = async (req, res) => {
 
     await supportRequest.save();
 
-    await logActivity({
+    void logActivity({
       action: "create",
       detail: `Created support request: ${supportRequest.subject}`,
       module: "support",

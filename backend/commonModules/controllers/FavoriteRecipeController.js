@@ -69,7 +69,7 @@ const addFavorite = async (req, res) => {
       recipe: recipeId,
     });
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Recipe Favorited",
@@ -151,7 +151,7 @@ const removeFavorite = async (req, res) => {
       });
     }
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Recipe Unfavorited",

@@ -259,7 +259,7 @@ const deleteTimetable = async (req, res) => {
       date: req.query.date,
     });
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.role || "user",
       action: "delete",

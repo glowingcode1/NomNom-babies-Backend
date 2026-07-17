@@ -1,3 +1,4 @@
+const Recipe = require("@models/Recipe");
 const { getActiveCart } = require("@utils/cartUtil");
 const {
   generateMeta,
@@ -71,20 +72,18 @@ const getCartRecipeDetail = async (req, res) => {
     if (
       !validateParams(req, res, {
         pathParams: ["recipeId"],
-
         objectIdFields: ["recipeId"],
       })
-    )
+    ) {
       return;
+    }
 
     const cart = await getActiveCart(req.user._id);
 
     if (!cart) {
       return sendResponse({
         res,
-
         statusCode: 404,
-
         translationKey: "cart_not_found",
       });
     }
@@ -96,30 +95,22 @@ const getCartRecipeDetail = async (req, res) => {
     if (!recipe) {
       return sendResponse({
         res,
-
         statusCode: 404,
-
         translationKey: "recipe_not_found",
       });
     }
 
     return sendResponse({
       res,
-
       statusCode: 200,
-
       translationKey: "data_fetched_successfully",
-
       data: recipe,
     });
   } catch (error) {
     return sendResponse({
       res,
-
       statusCode: 500,
-
       translationKey: "internal_server",
-
       error: error.message,
     });
   }
@@ -163,13 +154,13 @@ const addIngredient = async (req, res) => {
     }
 
     recipe.ingredients.push({
+      ingredientId: new mongoose.Types.ObjectId(),
       name: req.body.name,
-
       quantity: req.body.quantity,
-
-      source: "custom",
-
+      icon: "",
+      category: "",
       checked: false,
+      source: "custom",
     });
 
     await cart.save();
@@ -201,13 +192,21 @@ const toggleIngredient = async (req, res) => {
     if (
       !validateParams(req, res, {
         pathParams: ["recipeId", "ingredientId"],
-
         objectIdFields: ["recipeId", "ingredientId"],
       })
-    )
+    ) {
       return;
+    }
 
     const cart = await getActiveCart(req.user._id);
+
+    if (!cart) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "cart_not_found",
+      });
+    }
 
     const recipe = cart.recipes.find(
       (item) => String(item.recipe._id) === String(req.params.recipeId),
@@ -216,9 +215,7 @@ const toggleIngredient = async (req, res) => {
     if (!recipe) {
       return sendResponse({
         res,
-
         statusCode: 404,
-
         translationKey: "recipe_not_found",
       });
     }
@@ -228,9 +225,7 @@ const toggleIngredient = async (req, res) => {
     if (!ingredient) {
       return sendResponse({
         res,
-
         statusCode: 404,
-
         translationKey: "ingredient_not_found",
       });
     }
@@ -241,21 +236,15 @@ const toggleIngredient = async (req, res) => {
 
     return sendResponse({
       res,
-
       statusCode: 200,
-
       translationKey: "ingredient_updated_success",
-
       data: ingredient,
     });
   } catch (error) {
     return sendResponse({
       res,
-
       statusCode: 500,
-
       translationKey: "internal_server",
-
       error: error.message,
     });
   }

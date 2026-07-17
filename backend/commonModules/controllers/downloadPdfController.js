@@ -94,7 +94,7 @@ const downloadFeedingTimeTablePdf = async (req, res) => {
 
     const pdfUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType,
       action: "download",
@@ -196,7 +196,7 @@ const downloadRecipePdf = async (req, res) => {
 
     const pdfUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType,
       action: "download",
@@ -314,7 +314,7 @@ const downloadGroceryPdf = async (req, res) => {
 
     const pdfUrl = `${req.protocol}://${req.get("host")}${relativePath}`;
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType,
       action: "download",

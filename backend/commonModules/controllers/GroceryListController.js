@@ -66,7 +66,7 @@ const addRecipeToGroceryList = async (req, res) => {
     }
 
     const selectedIngredients = recipe.ingredients.filter((ingredient) =>
-      ingredientIds.includes(String(ingredient._id)),
+      ingredientIds.includes(String(ingredient.ingredientId)),
     );
 
     if (!selectedIngredients.length) {
@@ -81,18 +81,19 @@ const addRecipeToGroceryList = async (req, res) => {
       recipe: recipeId,
 
       ingredients: selectedIngredients.map((ingredient) => ({
-        ingredientId: ingredient._id,
+        ingredientId: ingredient.ingredientId,
         name: ingredient.name,
         quantity: ingredient.quantity,
-        category: ingredient.category,
         icon: ingredient.icon,
+        category: ingredient.category,
         checked: false,
+        source: "recipe",
       })),
     });
 
     await groceryList.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType,
       action: "add",
@@ -167,7 +168,6 @@ const getGroceryList = async (req, res) => {
     const recipesIncluded = groceryList.recipes.map((r) => ({
       recipeId: r.recipe._id,
       title: r.recipe.title,
-      image: r.recipe.image,
     }));
 
     const groceryChecklist = [];
@@ -280,7 +280,7 @@ const updateIngredientStatus = async (req, res) => {
 
     await groceryList.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType,
       action: "update",
@@ -311,13 +311,19 @@ const updateIngredientStatus = async (req, res) => {
 };
 
 // Update item checked status
-const updateGroceryItem = async (req, res) => {
+const updateGroceryItems = async (req, res) => {
   try {
-    const { itemId } = req.params;
-    const { checked } = req.body;
+    const { selectedItems, checked } = req.body;
 
-    const userId = req.user._id;
-    const user = await User.findById(userId);
+    if (!Array.isArray(selectedItems) || selectedItems.length === 0) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "selected_items_required",
+      });
+    }
+
+    const user = await User.findById(req.user._id);
 
     if (!user?.activeBaby) {
       return sendResponse({
@@ -328,7 +334,7 @@ const updateGroceryItem = async (req, res) => {
     }
 
     const groceryList = await GroceryList.findOne({
-      user: userId,
+      user: req.user._id,
       baby: user.activeBaby,
     });
 
@@ -340,41 +346,52 @@ const updateGroceryItem = async (req, res) => {
       });
     }
 
-    let ingredient = null;
+    const selectedSet = new Set(selectedItems);
 
-    groceryList.recipes.forEach((recipe) => {
-      const found = recipe.ingredients.id(itemId);
+    const updatedIngredients = [];
 
-      if (found) {
-        ingredient = found;
+    outerLoop: for (const recipe of groceryList.recipes) {
+      for (const ingredient of recipe.ingredients) {
+        const id = String(ingredient._id);
+
+        if (!selectedSet.has(id)) continue;
+
+        ingredient.checked = checked;
+
+        updatedIngredients.push({
+          _id: ingredient._id,
+          name: ingredient.name,
+          checked: ingredient.checked,
+        });
+
+        selectedSet.delete(id);
+
+        if (selectedSet.size === 0) {
+          break outerLoop;
+        }
       }
-    });
+    }
 
-    if (!ingredient) {
+    if (!updatedIngredients.length) {
       return sendResponse({
         res,
-
         statusCode: 404,
-
         translationKey: "ingredient_not_found",
       });
     }
 
-    ingredient.checked = checked;
-
     await groceryList.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType,
       action: "update",
-      detail: `${checked ? "Checked" : "Unchecked"} grocery item ${ingredient.name}`,
+      detail: `${checked ? "Checked" : "Unchecked"} ${updatedIngredients.length} grocery items`,
       module: "grocery_list",
       baby: user.activeBaby,
       targetId: groceryList._id,
       metadata: {
-        ingredientId: ingredient._id,
-        ingredientName: ingredient.name,
+        ingredientIds: updatedIngredients.map((i) => i._id),
         checked,
       },
     });
@@ -383,7 +400,9 @@ const updateGroceryItem = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "grocery_item_updated_success",
-      data: ingredient,
+      data: {
+        updatedItems: updatedIngredients,
+      },
     });
   } catch (error) {
     return sendResponse({
@@ -433,7 +452,7 @@ const removeRecipeFromGroceryList = async (req, res) => {
 
     await groceryList.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType,
       action: "delete",
@@ -524,7 +543,7 @@ const removeGroceryItem = async (req, res) => {
 
     await groceryList.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType,
       action: "delete",
@@ -584,7 +603,7 @@ const clearGroceryList = async (req, res) => {
       },
     );
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType,
       action: "delete",
@@ -616,7 +635,7 @@ module.exports = {
   addRecipeToGroceryList,
   getGroceryList,
   updateIngredientStatus,
-  updateGroceryItem,
+  updateGroceryItems,
   removeRecipeFromGroceryList,
   removeGroceryItem,
   clearGroceryList,

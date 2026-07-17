@@ -67,7 +67,7 @@ const updateUserLanguage = async (req, res) => {
 
     user.language = language.code;
     await user.save();
-    await logActivity({
+    void logActivity({
       user: user._id,
       userType: user.userType,
       action: "Language Preference Updated",

@@ -11,6 +11,10 @@ const recipeSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    icon: {
+      type: String,
+      default: "",
+    },
     prepTime: {
       type: Number, // in minutes
       required: true,

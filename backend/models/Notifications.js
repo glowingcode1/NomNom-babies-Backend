@@ -6,13 +6,7 @@ const NotificationTypes = {
   SYSTEM: "system",
   REMINDER: "reminder",
   DOCUMENTS_UPDATE: "documentsUpdate",
-  NEW_BOOKING: "newBooking",
-  BOOKING_REQUEST: "BookingRequest",
-  BOOKING_APPROVED: "bookingApproved",
-  BOOKING_REJECTED: "bookingRejected",
-  BOOKING_PICKED: "bookingPicked",
-  BOOKING_COMPLETED: "bookingCompleted",
-  BOOKING_CANCELED: "bookingCanceled",
+  NEW_BABY: "newBaby",
 };
 
 // Define the NotificationSchema

@@ -169,7 +169,7 @@ const createFeedingSchedule = async (req, res) => {
       date: today,
     });
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.role || "user",
       action: "create",
@@ -246,7 +246,7 @@ const updateFeedingSchedule = async (req, res) => {
 
     await schedule.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.role || "user",
       action: "update",
@@ -309,7 +309,7 @@ const deleteFeedingSchedule = async (req, res) => {
       });
     }
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.role || "user",
       action: "delete",
@@ -481,7 +481,7 @@ const toggleSlotCompletion = async (req, res) => {
     if (existing) {
       await existing.deleteOne();
 
-      await logActivity({
+      void logActivity({
         user: req.user._id,
         userType: req.user.role || "user",
         action: "uncomplete",
@@ -522,7 +522,7 @@ const toggleSlotCompletion = async (req, res) => {
       completed: true,
     });
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.role || "user",
       action: "complete",
@@ -584,7 +584,7 @@ const startFeedingPlan = async (req, res) => {
 
     await baby.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.role || "user",
       action: "start",

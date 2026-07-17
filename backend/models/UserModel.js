@@ -5,29 +5,38 @@ const moment = require("moment-timezone");
 const validator = require("validator");
 const { randomBytes } = require("crypto");
 
-// Define subscription statuses
-const SubscriptionType = {
-  PLAN1: "plan1", //free
-  PLAN2: "plan2", //monthly
-  PLAN3: "plan3", // yearly
-};
+const subscriptionSchema = new mongoose.Schema(
+  {
+    subscription: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Subscription",
+    },
 
-// Define subscription schema
-const subscriptionSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: Object.values(SubscriptionType),
-    required: true,
-    default: SubscriptionType.PLAN1, // Default subscription for all users
+    startDate: {
+      type: Date,
+      default: Date.now,
+    },
+
+    endDate: {
+      type: Date,
+      default: null,
+    },
+
+    status: {
+      type: String,
+      enum: ["active", "expired", "cancelled"],
+      default: "active",
+    },
+
+    paymentId: {
+      type: String,
+      default: "",
+    },
   },
-  startDate: {
-    type: Date,
-    default: Date.now, // Start date defaults to now for other subscriptions
+  {
+    _id: false,
   },
-  endDate: {
-    type: Date, // Can be null for lifetime subscriptions (like spark connection)
-  },
-});
+);
 
 const userSchema = new mongoose.Schema(
   {
@@ -236,13 +245,7 @@ const userSchema = new mongoose.Schema(
     // Subscription Details
     subscriptions: {
       type: [subscriptionSchema],
-      default: [
-        {
-          type: SubscriptionType.PLAN1,
-          startDate: null,
-          endDate: null, // No expiry for the default subscription
-        },
-      ],
+      default: [],
     },
 
     provider: {
@@ -384,4 +387,4 @@ const generateResetToken = () => {
 
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 
-module.exports = { User, SubscriptionType, generateResetToken };
+module.exports = { User, generateResetToken };

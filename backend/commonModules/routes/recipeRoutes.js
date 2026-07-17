@@ -10,8 +10,6 @@ const {
   createRecipe,
   updateRecipe,
   deleteRecipe,
-  getUserRecipes,
-  getUserBabyRecipes,
   getBabyRecipes,
   getCustomCulturalPicks,
   adminGetRecipeById,
@@ -27,8 +25,6 @@ const deleteRecipeRateLimiter = createRateLimiter("deleteRecipe", 15, 15);
 // PUBLIC (logged-in users)
 router.get("/", auth, getRecipes);
 router.get("/baby", auth, getBabyRecipes);
-router.get("/admin/users/:userId", auth, getUserRecipes);
-router.get("/admin/users/:userId/baby/:babyId", auth, getUserBabyRecipes);
 router.get("/cultural-picks", auth, getCustomCulturalPicks);
 router.get("/:id", auth, getRecipeById);
 

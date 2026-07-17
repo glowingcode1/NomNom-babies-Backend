@@ -5,7 +5,7 @@ const createRateLimiter = require("../../helperUtils/rateLimiter");
 const {
     getNotifications,
     readNotification,
-} = require("../controllers/notificationsController");
+} = require("../../commonModules/controllers/notificationsController");
 
 const router = express.Router();
 const notificationsRateLimiter = createRateLimiter("notifications", 10, 50);

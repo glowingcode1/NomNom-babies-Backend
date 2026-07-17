@@ -124,11 +124,7 @@ const getNutrition = async (req, res) => {
 
       translationKey: "data_fetched_successfully",
 
-      data: {
-        nutrients,
-
-        feedingInsight: nutritions[0]?.feedingInsight || "",
-      },
+      data: nutrients,
     });
   } catch (error) {
     return sendResponse({
@@ -274,7 +270,7 @@ const createNutrition = async (req, res) => {
       isActive: isActive !== undefined ? isActive : true,
     });
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Nutrition Created",
@@ -341,7 +337,7 @@ const updateNutrition = async (req, res) => {
 
     await nutrition.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Nutrition Updated",
@@ -402,7 +398,7 @@ const deleteNutrition = async (req, res) => {
 
     await Nutrition.findByIdAndDelete(req.params.id);
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Nutrition Deleted",

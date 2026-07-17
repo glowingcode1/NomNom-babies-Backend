@@ -80,7 +80,7 @@ const readNotification = async (req, res) => {
     const notification = await NotificationExp.findByIdAndUpdate(
       req.params.id,
       { isRead: true },
-      { new: true }
+      { new: true },
     );
     if (!notification) {
       return sendResponse({

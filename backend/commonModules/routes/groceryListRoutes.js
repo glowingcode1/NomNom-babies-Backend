@@ -1,7 +1,7 @@
 const {
   getGroceryList,
   addRecipeToGroceryList,
-  updateGroceryItem,
+  updateGroceryItems,
   removeGroceryItem,
   clearGroceryList,
   removeRecipeFromGroceryList,
@@ -26,9 +26,9 @@ const clearListRateLimiter = createRateLimiter("clearGroceryList", 15, 15);
 
 router.get("/", auth, getGroceryList);
 
-router.post("/:add-recipe", auth, addRecipeRateLimiter, addRecipeToGroceryList);
+router.post("/add-recipe", auth, addRecipeRateLimiter, addRecipeToGroceryList);
 
-router.patch("/item/:itemId", auth, updateItemRateLimiter, updateGroceryItem);
+router.patch("/items", auth, updateItemRateLimiter, updateGroceryItems);
 
 // Remove Item
 router.delete("/item/:itemId", auth, removeItemRateLimiter, removeGroceryItem);

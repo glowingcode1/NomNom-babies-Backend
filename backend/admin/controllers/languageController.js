@@ -44,7 +44,7 @@ const createLanguage = async (req, res) => {
     }
     await language.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType || req.user.accountState?.userType,
       action: "Language Created",
@@ -190,7 +190,7 @@ const updateLanguage = async (req, res) => {
 
     await language.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType || req.user.accountState?.userType,
       action: "Language Updated",
@@ -250,7 +250,7 @@ const deleteLanguage = async (req, res) => {
 
     await language.deleteOne();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType || req.user.accountState?.userType,
       action: "Language Deleted",

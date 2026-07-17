@@ -38,7 +38,7 @@ const createFoodTracker = async (req, res) => {
       reaction,
     });
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.role || "user",
       action: "create",

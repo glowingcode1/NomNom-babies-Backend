@@ -131,7 +131,7 @@ const selectCountries = async (req, res) => {
       { new: true },
     ).populate("onboarding.selectedCountries", "_id name signatureFoods");
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType || req.user.accountState?.userType,
       action: "Countries Selected",
@@ -194,7 +194,7 @@ const createCountry = async (req, res) => {
       signatureFoods,
     });
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Country Created",
@@ -267,7 +267,7 @@ const updateCountry = async (req, res) => {
       });
     }
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Country Updated",
@@ -321,7 +321,7 @@ const deleteCountry = async (req, res) => {
       });
     }
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Country Deleted",

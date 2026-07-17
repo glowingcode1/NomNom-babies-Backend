@@ -99,6 +99,7 @@ const getRecipes = async (req, res) => {
         .select(
           `
             title
+            icon
             image
             prepTime
             mealType
@@ -212,26 +213,23 @@ const getRecipeById = async (req, res) => {
     const groceryMap = new Map();
 
     groceryIngredients.forEach((ingredient) => {
-      groceryMap.set(String(ingredient.ingredient), ingredient);
+      groceryMap.set(String(ingredient.ingredientId), ingredient);
     });
 
     const formatRecipeIngredients = (ingredients, groceryMap) => {
       return ingredients.map((ingredient) => {
-        const groceryIngredient = groceryMap.get(String(ingredient._id));
+        const groceryIngredient = groceryMap.get(
+          String(ingredient.ingredientId),
+        );
 
         return {
-          _id: ingredient._id,
+          _id: ingredient.ingredientId,
           name: ingredient.name,
           quantity: ingredient.quantity,
           icon: ingredient.icon,
+          category: ingredient.category,
           isAddedToGroceryList: Boolean(groceryIngredient),
           checked: groceryIngredient?.checked ?? false,
-          groceryItem: groceryIngredient
-            ? {
-                _id: groceryIngredient._id,
-                category: groceryIngredient.category,
-              }
-            : null,
         };
       });
     };
@@ -245,6 +243,8 @@ const getRecipeById = async (req, res) => {
       recipeId: recipe._id,
 
       title: recipe.title,
+
+      icon: recipe.icon,
 
       image: recipe.image,
 
@@ -405,6 +405,8 @@ const getBabyRecipes = async (req, res) => {
 
       title: recipe.title,
 
+      icon: recipe.icon,
+
       image: recipe.image,
 
       prepTime: recipe.prepTime,
@@ -493,6 +495,7 @@ const getCustomCulturalPicks = async (req, res) => {
     const customCulturalPicks = recipes.map((recipe) => ({
       _id: recipe._id,
       title: recipe.title,
+      icon: recipe.icon,
       image: recipe.image,
       mealType: recipe.mealType,
       prepTime: recipe.prepTime,
@@ -607,118 +610,19 @@ const adminGetRecipeById = async (req, res) => {
   }
 };
 
-const getUserRecipes = async (req, res) => {
-  try {
-    if (
-      !validateParams(req, res, {
-        pathParams: ["userId"],
-        objectIdFields: ["userId"],
-      })
-    )
-      return;
-
-    const babies = await Baby.find({
-      user: req.params.userId,
-      isActive: true,
-    });
-
-    if (!babies.length) {
-      return sendResponse({
-        res,
-        statusCode: 200,
-        translationKey: "data_fetched_successfully",
-        data: [],
-      });
-    }
-
-    const stageIds = babies.map((baby) => baby.babyStage).filter(Boolean);
-
-    const countryIds = babies.flatMap((baby) => baby.selectedCountries || []);
-
-    const recipes = await Recipe.find({
-      status: "published",
-      isActive: true,
-      $or: [{ babyStage: { $in: stageIds } }, { country: { $in: countryIds } }],
-    })
-      .populate("country", "_id name")
-      .populate("babyStage", "_id title")
-      .populate("nutritionTags", "_id name benefit")
-      .select("title image prepTime mealType nutritionTags country babyStage")
-      .sort({ createdAt: -1 });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "data_fetched_successfully",
-      data: recipes,
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
-
-const getUserBabyRecipes = async (req, res) => {
-  try {
-    if (
-      !validateParams(req, res, {
-        pathParams: ["userId", "babyId"],
-        objectIdFields: ["userId", "babyId"],
-      })
-    )
-      return;
-
-    const baby = await Baby.findOne({
-      _id: req.params.babyId,
-      user: req.params.userId,
-      isActive: true,
-    });
-
-    if (!baby) {
-      return sendResponse({
-        res,
-        statusCode: 404,
-        translationKey: "baby_not_found",
-      });
-    }
-
-    const recipes = await Recipe.find({
-      status: "published",
-      isActive: true,
-      babyStage: baby.babyStage,
-      country: { $in: baby.selectedCountries },
-    })
-      .populate("country", "_id name")
-      .populate("babyStage", "_id title")
-      .populate("nutritionTags", "_id name benefit")
-      .sort({ createdAt: -1 });
-
-    return sendResponse({
-      res,
-      statusCode: 200,
-      translationKey: "data_fetched_successfully",
-      data: recipes,
-    });
-  } catch (error) {
-    return sendResponse({
-      res,
-      statusCode: 500,
-      translationKey: "internal_server",
-      error: error.message,
-    });
-  }
-};
-
 // Create a recipe
 const createRecipe = async (req, res) => {
   try {
     if (
       !validateParams(req, res, {
-        rawData: ["title", "prepTime", "country", "babyStage", "nutritionTags"],
+        rawData: [
+          "title",
+          "icon",
+          "prepTime",
+          "country",
+          "babyStage",
+          "nutritionTags",
+        ],
         objectIdFields: [
           "country",
           "babyStage",
@@ -757,6 +661,7 @@ const createRecipe = async (req, res) => {
 
     const recipe = await Recipe.create({
       title: title.trim(),
+      icon,
       image,
       prepTime,
       country,
@@ -771,7 +676,7 @@ const createRecipe = async (req, res) => {
       acceptanceLabel: acceptanceLabel || "",
     });
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Recipe Created",
@@ -822,6 +727,7 @@ const updateRecipe = async (req, res) => {
 
     const fields = [
       "title",
+      "icon",
       "image",
       "prepTime",
       "country",
@@ -893,7 +799,7 @@ const updateRecipe = async (req, res) => {
 
     await recipe.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Recipe Updated",
@@ -947,7 +853,7 @@ const deleteRecipe = async (req, res) => {
       });
     }
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Recipe Deleted",
@@ -983,8 +889,6 @@ module.exports = {
   getBabyRecipes,
   adminGetRecipes,
   adminGetRecipeById,
-  getUserRecipes,
-  getUserBabyRecipes,
   createRecipe,
   updateRecipe,
   deleteRecipe,

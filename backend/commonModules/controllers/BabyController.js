@@ -10,6 +10,8 @@ const {
 } = require("@utils/responseUtil");
 const { getBabyInfo, babyPopulate } = require("@utils/babyUtil");
 const { logActivity } = require("@utils/activityUtil");
+const { sendUserNotifications } = require("./communicationController");
+const { NotificationTypes } = require("@models/Notifications");
 
 // Create a new baby profile
 const createBaby = async (req, res) => {
@@ -22,7 +24,6 @@ const createBaby = async (req, res) => {
       return;
 
     const { profileIcon, name, stageId, selectedCountries = [] } = req.body;
-
     // Validate stage if provided
     if (stageId) {
       const stage = await BabyStage.findOne({ _id: stageId, active: true });
@@ -86,7 +87,7 @@ const createBaby = async (req, res) => {
       { path: "selectedCountries", select: "_id name signatureFoods" },
     ]);
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Baby Created",
@@ -99,6 +100,17 @@ const createBaby = async (req, res) => {
         stage: baby.babyStage?._id,
         selectedCountries: baby.selectedCountries.map((country) => country._id),
       },
+    });
+
+    //send notificaiton for new created baby
+    void sendUserNotifications({
+      recipientIds: [req.user._id],
+      title: "New Baby added",
+      body: `Created Baby Profile ${baby.name}`,
+      data: { type: NotificationTypes.NEW_BABY, objectType: "Baby" },
+      sender: null, // Optional: sender ID
+      objectId: baby._id, // Optional: object ID
+      saveNotification: true, // send false if you don't want to save notification in db
     });
 
     return sendResponse({
@@ -312,7 +324,7 @@ const updateBaby = async (req, res) => {
     await baby.save();
     await baby.populate(babyPopulate);
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Baby Updated",
@@ -365,7 +377,7 @@ const deleteBaby = async (req, res) => {
     baby.isActive = false;
     await baby.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Baby Deleted",
@@ -435,7 +447,7 @@ const switchActiveBaby = async (req, res) => {
 
     await baby.populate(babyPopulate);
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Active Baby Switched",

@@ -108,20 +108,24 @@ const allUsers = async (req, res) => {
       });
     });
 
-    const formattedUsers = users.map((user) => ({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      avatar: user.profileIcon || "",
+    const formattedUsers = users.map((user) => {
+      const userBabies = babiesMap[user._id.toString()] || [];
 
-      status: user.accountState?.status || "inactive",
+      const foodCulturesSet = new Set();
+      userBabies.forEach((baby) => {
+        baby.foodCultures.forEach((fc) => foodCulturesSet.add(fc));
+      });
 
-      foodCultures:
-        user.onboarding?.selectedCountries?.map((country) => country.name) ||
-        [],
-
-      babies: babiesMap[user._id.toString()] || [],
-    }));
+      return {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.profileIcon || "",
+        status: user.accountState?.status || "inactive",
+        foodCultures: Array.from(foodCulturesSet),
+        babies: userBabies,
+      };
+    });
 
     return sendResponse({
       res,
@@ -157,57 +161,50 @@ const getUserById = async (req, res) => {
       });
     }
 
-    const [
-      babies,
-      recipes,
-      feedingSchedules,
-      feedingLogs,
-      favoriteRecipes,
-      subscriptions,
-      supportQuestions,
-    ] = await Promise.all([
-      Baby.find({
-        user: user._id,
-      })
-        .populate("selectedCountries", "_id name")
-        .populate("babyStage", "_id title")
-        .lean(),
-      Recipe.find({
-        user: user._id,
-      })
-        .populate("recipe", "title image category")
-        .populate("baby", "name")
-        .sort({ updatedAt: -1 })
-        .lean(),
+    const [babies, recipes, favoriteRecipes, subscriptions, supportQuestions] =
+      await Promise.all([
+        Baby.find({
+          user: user._id,
+        })
+          .populate("selectedCountries", "_id name")
+          .populate("babyStage", "_id title")
+          .lean(),
+        Recipe.find({
+          user: user._id,
+        })
+          .populate("recipe", "title image category")
+          .populate("baby", "name")
+          .sort({ updatedAt: -1 })
+          .lean(),
 
-      FeedingSchedule.find({
-        user: id,
-      })
-        .populate("baby", "name")
-        .lean(),
+        FeedingSchedule.find({
+          user: id,
+        })
+          .populate("baby", "name")
+          .lean(),
 
-      FeedingLog.find({
-        user: user._id,
-      }).lean(),
+        FeedingLog.find({
+          user: user._id,
+        }).lean(),
 
-      FavoriteRecipe.find({
-        user: user._id,
-      })
-        .populate("recipe", "title image")
-        .lean(),
+        FavoriteRecipe.find({
+          user: user._id,
+        })
+          .populate("recipe", "title image")
+          .lean(),
 
-      Subscription.find({
-        user: user._id,
-      })
-        .sort({ createdAt: -1 })
-        .lean(),
+        Subscription.find({
+          user: user._id,
+        })
+          .sort({ createdAt: -1 })
+          .lean(),
 
-      SupportRequest.find({
-        user: user._id,
-      })
-        .sort({ createdAt: -1 })
-        .lean(),
-    ]);
+        SupportRequest.find({
+          user: user._id,
+        })
+          .sort({ createdAt: -1 })
+          .lean(),
+      ]);
 
     const timetables = await FeedingSchedule.aggregate([
       {
@@ -305,6 +302,14 @@ const getUserById = async (req, res) => {
       },
     ]);
 
+    const foodCulturesSet = new Set();
+    babies.forEach((baby) => {
+      (baby.selectedCountries || []).forEach((c) =>
+        foodCulturesSet.add(c.name),
+      );
+    });
+    const foodCultures = Array.from(foodCulturesSet);
+
     return sendResponse({
       res,
       statusCode: 200,
@@ -332,7 +337,7 @@ const getUserById = async (req, res) => {
 
         subscriptions: user.subscriptions,
 
-        foodCultures: user.onboarding?.selectedCountries || [],
+        foodCultures,
 
         babies,
 

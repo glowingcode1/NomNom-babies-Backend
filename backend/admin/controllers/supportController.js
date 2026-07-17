@@ -89,7 +89,7 @@ const updateSupportStatus = async (req, res) => {
       translationKey: "not_found",
     });
   }
-  await logActivity({
+  void logActivity({
     action: "update",
     detail: `Updated support request status to ${support.status}`,
     module: "support",
@@ -127,7 +127,7 @@ const deleteSupportRequest = async (req, res) => {
     });
   }
 
-  await logActivity({
+  void logActivity({
     action: "delete",
     detail: `Deleted support request: ${support.subject}`,
     module: "support",

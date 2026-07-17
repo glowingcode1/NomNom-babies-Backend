@@ -121,7 +121,7 @@ const selectBabyStage = async (req, res) => {
 
     await baby.populate("babyStage", "title features");
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Baby Stage Selected",
@@ -275,7 +275,7 @@ const createBabyStage = async (req, res) => {
     const stage = new BabyStage({ title: title.trim(), features });
     await stage.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Baby Stage Created",
@@ -339,7 +339,7 @@ const updateBabyStage = async (req, res) => {
 
     await stage.save();
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Baby Stage Updated",
@@ -399,7 +399,7 @@ const deleteBabyStage = async (req, res) => {
       });
     }
 
-    await logActivity({
+    void logActivity({
       user: req.user._id,
       userType: req.user.userType ?? req.user.accountState?.userType,
       action: "Baby Stage Deleted",

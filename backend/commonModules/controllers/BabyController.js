@@ -117,7 +117,7 @@ const createBaby = async (req, res) => {
       res,
       statusCode: 201,
       translationKey: "baby_created_success",
-      data: baby,
+      data: getBabyInfo(baby),
     });
   } catch (error) {
     return sendResponse({
@@ -345,7 +345,7 @@ const updateBaby = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "baby_updated_success",
-      data: baby,
+      data: getBabyInfo(baby),
     });
   } catch (error) {
     return sendResponse({

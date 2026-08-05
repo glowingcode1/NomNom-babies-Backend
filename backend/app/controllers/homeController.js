@@ -188,10 +188,6 @@ const getHome = async (req, res) => {
           time: nextMeal.time,
           isOptional: nextMeal.isOptional,
         } : null,
-
-        downloads: {
-          enabled: true,
-        },
       },
     });
   } catch (error) {

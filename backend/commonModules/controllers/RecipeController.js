@@ -634,6 +634,7 @@ const createRecipe = async (req, res) => {
 
     const {
       title,
+      icon,
       image,
       prepTime,
       country,

@@ -16,7 +16,6 @@ const createMealsRateLimiter = createRateLimiter("createMeals", 15, 15);
 const updateMealsRateLimiter = createRateLimiter("updateMeals", 15, 15);
 const deleteMealsRateLimiter = createRateLimiter("deleteMeals", 15, 15);
 
-
 // CONTENT ADMIN
 router.post(
   "/admin",
@@ -25,6 +24,7 @@ router.post(
   createMealsRateLimiter,
   createMeal,
 );
+router.get("/admin/all", auth, roleMiddleware(["admin"]), adminGetMeals);
 router.put(
   "/admin/:id",
   auth,

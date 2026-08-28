@@ -65,7 +65,7 @@ const adminGetMeals = async (req, res) => {
               {
                 $match: {
                   $expr: {
-                    $eq: ["$mealType", "$$mealId"],
+                    $eq: ["$$mealId", "$mealType"],
                   },
                 },
               },
@@ -80,7 +80,7 @@ const adminGetMeals = async (req, res) => {
         // Convert lookup result into recipesCount
         {
           $addFields: {
-            recipesCount: {
+            recipes: {
               $ifNull: [
                 {
                   $arrayElemAt: ["$recipeStats.count", 0],
@@ -94,13 +94,19 @@ const adminGetMeals = async (req, res) => {
         // Don't return internal lookup data
         {
           $project: {
-            recipeStats: 0,
+            name: 1,
+            description: 1,
+            status: 1,
+            isActive: 1,
+            recipes: 1,
+            createdAt: 1,
+            updatedAt: 1,
           },
         },
 
         {
           $sort: {
-            createdAt: -1,
+            name: -1,
           },
         },
 
@@ -145,9 +151,6 @@ const adminGetMeals = async (req, res) => {
 // CREATE
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Create a meal type
- */
 const createMeal = async (req, res) => {
   try {
     if (
@@ -155,8 +158,6 @@ const createMeal = async (req, res) => {
         rawData: [
           "name",
           "description",
-          "status",
-          "isActive",
         ],
       })
     ) {
@@ -266,9 +267,6 @@ const createMeal = async (req, res) => {
 // UPDATE
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Update a meal type
- */
 const updateMeal = async (req, res) => {
   try {
     if (
@@ -434,13 +432,6 @@ const updateMeal = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // DELETE
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Delete a meal type
- *
- * A meal type cannot be deleted if it is currently
- * being used by one or more recipes.
- */
 const deleteMeal = async (req, res) => {
   try {
     if (

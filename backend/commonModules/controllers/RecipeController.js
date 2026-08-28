@@ -621,11 +621,13 @@ const createRecipe = async (req, res) => {
           "prepTime",
           "country",
           "babyStage",
+          "mealType",
           "nutritionTags",
         ],
         objectIdFields: [
           "country",
           "babyStage",
+          "mealType",
           ...(req.body.nutritionTags || []),
         ],
       })
@@ -764,6 +766,17 @@ const updateRecipe = async (req, res) => {
         res,
         statusCode: 400,
         translationKey: "invalid_baby_stage",
+      });
+    }
+
+    if (
+      req.body.mealType &&
+      !mongoose.Types.ObjectId.isValid(req.body.mealType)
+    ) {
+      return sendResponse({
+        res,
+        statusCode: 400,
+        translationKey: "invalid_meal_type",
       });
     }
 

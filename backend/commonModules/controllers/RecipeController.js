@@ -538,6 +538,7 @@ const adminGetRecipes = async (req, res) => {
       Recipe.find(query)
         .populate("country", "_id name")
         .populate("babyStage", "_id title")
+        .populate("mealType", "_id name")
         .populate("nutritionTags", "_id name benefit")
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
@@ -578,6 +579,7 @@ const adminGetRecipeById = async (req, res) => {
     const recipe = await Recipe.findById(req.params.id)
       .populate("country", "_id name")
       .populate("babyStage", "_id title")
+      .populate("mealType", "_id name")
       .populate("nutritionTags", "_id name benefit");
 
     if (!recipe) {

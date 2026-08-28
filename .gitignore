@@ -1,0 +1,123 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Package manager
+.npm/
+.yarn/
+.pnpm-store/
+
+# ==========================================
+# Environment Variables
+# ==========================================
+
+.env
+.env.*
+!.env.example
+
+# ==========================================
+# Logs
+# ==========================================
+
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==========================================
+# Runtime / Temporary files
+# ==========================================
+
+tmp/
+temp/
+*.tmp
+*.temp
+*.pid
+*.seed
+
+# ==========================================
+# Coverage / Testing
+# ==========================================
+
+coverage/
+.nyc_output/
+*.lcov
+
+# ==========================================
+# Build / Distribution
+# ==========================================
+
+dist/
+build/
+out/
+
+# ==========================================
+# Uploads / Generated Files
+# ==========================================
+
+uploads/
+public/uploads/
+storage/
+*.csv
+*.xlsx
+*.zip
+
+# ==========================================
+# IDE / Editors
+# ==========================================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# VS Code local files
+.history/
+
+# ==========================================
+# OS Files
+# ==========================================
+
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==========================================
+# Debuggers
+# ==========================================
+
+.vscode/launch.json
+.vscode/settings.json
+
+# ==========================================
+# Database / Local Development
+# ==========================================
+
+*.sqlite
+*.sqlite3
+*.db
+
+# ==========================================
+# Secrets / Certificates
+# ==========================================
+
+*.pem
+*.key
+*.crt
+*.p12
+
+# Firebase / Service Account
+serviceAccountKey.json
+firebase-service-account.json
+
+# ==========================================
+# Miscellaneous
+# ==========================================
+
+.cache/
+.parcel-cache/
+.eslintcache

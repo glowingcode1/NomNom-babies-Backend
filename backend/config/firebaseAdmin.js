@@ -1,35 +1,20 @@
 const admin = require("firebase-admin");
-const fs = require("fs");
-const path = require("path");
 
-const folderPath = path.join(__dirname, "../secretAssets");
-const filePath = path.join(folderPath, "serviceAccountKey.json");
+const projectId = process.env.FIREBASE_PROJECT_ID;
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
-// Ensure folder exists
-if (!fs.existsSync(folderPath)) {
-  fs.mkdirSync(folderPath, { recursive: true });
-}
-
-// Ensure file exists and write sample if missing
-if (!fs.existsSync(filePath)) {
-  fs.writeFileSync(
-    filePath,
-    JSON.stringify({ sample: "SERVICE_ACCOUNT_PLACEHOLDER" }, null, 2),
-  );
-}
-
-const serviceAccount = require("../secretAssets/serviceAccountKey.json");
-
-// STATIC value to detect placeholder
-const SAMPLE_MARKER = "SERVICE_ACCOUNT_PLACEHOLDER";
-
-if (serviceAccount.sample === SAMPLE_MARKER) {
+if (!projectId || !clientEmail || !privateKey) {
   console.warn(
-    "Firebase Admin skipped — service account is sample at ../secretAssets/serviceAccountKey.json.",
+    "Firebase Admin skipped — Firebase environment variables are missing.",
   );
 } else {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
+    credential: admin.credential.cert({
+      projectId,
+      clientEmail,
+      privateKey,
+    }),
   });
 
   console.log("Firebase Admin initialized");

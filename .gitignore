@@ -121,6 +121,8 @@ dist
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+.vscode
+.public/fonts
 
 # yarn v2
 .yarn/cache

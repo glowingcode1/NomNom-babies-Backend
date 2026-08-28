@@ -30,9 +30,9 @@ const recipeSchema = new mongoose.Schema(
       required: true,
     },
     mealType: {
-      type: String,
-      trim: true,
-      default: "",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Meals",
+      required: true,
     },
     nutritionTags: [
       {

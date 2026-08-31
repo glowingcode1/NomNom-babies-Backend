@@ -7,6 +7,8 @@ const SupportRequest = require("@models/SupportRequest");
 const Activity = require("@models/Activity");
 const { sendResponse } = require("@utils/responseUtil");
 const Baby = require("@models/Baby");
+const { Devices } = require("@models/Devices");
+const Meals = require("@models/Meals");
 
 // ── Widgets (stat cards) — downloads restored via Activity ──────────────
 const dashboard = async (req, res) => {
@@ -98,7 +100,12 @@ const userStatusStats = async (req, res) => {
       res,
       statusCode: 200,
       translationKey: "data_fetched_successfully",
-      data: { active, inactive, suspended },
+      data: {
+        active,
+        inactive,
+        suspended,
+        total: active + inactive + suspended,
+      },
     });
   } catch (error) {
     return sendResponse({
@@ -259,11 +266,28 @@ const topDownloadedRecipes = async (req, res) => {
       { $sort: { downloads: -1 } },
       { $limit: 10 },
       {
+        $lookup: {
+          from: Meals.collection.name,
+          localField: "mealType",
+          foreignField: "_id",
+          as: "mealType",
+        },
+      },
+      {
+        $unwind: {
+          path: "$mealType",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
         $project: {
           _id: 0,
           recipeId: "$_id",
           title: 1,
-          mealType: 1,
+          mealType: {
+            _id: "$mealType._id",
+            name: "$mealType.name",
+          },
           downloads: 1,
         },
       },
@@ -314,6 +338,7 @@ const topViewedRecipes = async (req, res) => {
   try {
     const recipes = await Recipe.find({ status: "published" })
       .populate("country", "_id name")
+      .populate("mealType", "_id name")
       .sort({ views: -1 })
       .limit(10)
       .select("title mealType views");
@@ -458,6 +483,55 @@ const getCountryGrowth = async (req, res) => {
   }
 };
 
+// ── App downloads (unique installs by platform: Android / iOS) ─────────
+const appDownloadStats = async (req, res) => {
+  try {
+    const results = await Devices.aggregate([
+      { $unwind: "$devices" },
+      {
+        $group: {
+          _id: {
+            deviceType: "$devices.deviceType",
+            deviceId: "$devices.deviceId",
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.deviceType",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const counts = { android: 0, ios: 0 };
+
+    results.forEach((r) => {
+      if (counts[r._id] !== undefined) {
+        counts[r._id] = r.count;
+      }
+    });
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: {
+        android: counts.android,
+        ios: counts.ios,
+        total: counts.android + counts.ios,
+      },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   dashboard,
   userStatusStats,
@@ -469,4 +543,5 @@ module.exports = {
   topViewedRecipes,
   topCountries,
   getCountryGrowth,
+  appDownloadStats,
 };

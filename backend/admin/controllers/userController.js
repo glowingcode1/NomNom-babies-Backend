@@ -19,6 +19,7 @@ const SupportRequest = require("@models/SupportRequest");
 const Subscription = require("@models/Subscription");
 const FeedingLog = require("@models/FeedingLog");
 const FeedingSchedule = require("@models/FeedingSchedule");
+const GroceryList = require("@models/GroceryList");
 // Path to the JSON file
 const currenciesFilePath = path.join(
   process.cwd(),
@@ -82,12 +83,27 @@ const allUsers = async (req, res) => {
 
     const userIds = users.map((user) => user._id);
 
-    const babies = await Baby.find({
-      user: { $in: userIds },
-    })
+    const [babies, groceryLists] = await Promise.all([
+      Baby.find({
+        user: { $in: userIds },
+      })
 
-      .populate("selectedCountries", "_id name")
-      .lean();
+        .populate("selectedCountries", "_id name")
+        .lean(),
+
+      GroceryList.find({
+        user: { $in: userIds },
+      })
+        .select("-recipes.ingredients.checked")
+        .populate("recipes.recipe", "_id title image icon")
+        .lean(),
+    ]);
+
+    const groceryListMap = {};
+
+    groceryLists.forEach((list) => {
+      groceryListMap[list.user.toString()] = list;
+    });
 
     const babiesMap = {};
 
@@ -124,6 +140,18 @@ const allUsers = async (req, res) => {
         status: user.accountState?.status || "inactive",
         foodCultures: Array.from(foodCulturesSet),
         babies: userBabies,
+        groceryList: (() => {
+          const list = groceryListMap[user._id.toString()] || { recipes: [] };
+
+          return {
+            ...list,
+            recipesCount: list.recipes.length,
+            itemsCount: list.recipes.reduce(
+              (sum, r) => sum + (r.ingredients?.length || 0),
+              0,
+            ),
+          };
+        })(),
       };
     });
 
@@ -161,50 +189,66 @@ const getUserById = async (req, res) => {
       });
     }
 
-    const [babies, recipes, favoriteRecipes, subscriptions, supportQuestions] =
-      await Promise.all([
-        Baby.find({
-          user: user._id,
-        })
-          .populate("selectedCountries", "_id name")
-          .populate("babyStage", "_id title")
-          .lean(),
-        Recipe.find({
-          user: user._id,
-        })
-          .populate("recipe", "title image category")
-          .populate("baby", "name")
-          .sort({ updatedAt: -1 })
-          .lean(),
+    const [
+      babies,
+      recipes,
+      feedingSchedule,
+      feedingLogs,
+      favoriteRecipes,
+      subscriptions,
+      supportQuestions,
+      groceryList,
+    ] = await Promise.all([
+      Baby.find({
+        user: user._id,
+      })
+        .populate("selectedCountries", "_id name")
+        .populate("babyStage", "_id title")
+        .lean(),
+      Recipe.find({
+        user: user._id,
+      })
+        .populate("recipe", "title image category")
+        .populate("baby", "name")
+        .sort({ updatedAt: -1 })
+        .lean(),
 
-        FeedingSchedule.find({
-          user: id,
-        })
-          .populate("baby", "name")
-          .lean(),
+      FeedingSchedule.find({
+        user: id,
+      })
+        .populate("baby", "name")
+        .lean(),
 
-        FeedingLog.find({
-          user: user._id,
-        }).lean(),
+      FeedingLog.find({
+        user: user._id,
+      }).lean(),
 
-        FavoriteRecipe.find({
-          user: user._id,
-        })
-          .populate("recipe", "title image")
-          .lean(),
+      FavoriteRecipe.find({
+        user: user._id,
+      })
+        .populate("recipe", "title image")
+        .lean(),
 
-        Subscription.find({
-          user: user._id,
-        })
-          .sort({ createdAt: -1 })
-          .lean(),
+      Subscription.find({
+        user: user._id,
+      })
+        .sort({ createdAt: -1 })
+        .lean(),
 
-        SupportRequest.find({
-          user: user._id,
-        })
-          .sort({ createdAt: -1 })
-          .lean(),
-      ]);
+      SupportRequest.find({
+        user: user._id,
+      })
+        .sort({ createdAt: -1 })
+        .lean(),
+
+      GroceryList.findOne({
+        user: user._id,
+      })
+        .select("-recipes.ingredients.checked")
+        .populate("baby", "name")
+        .populate("recipes.recipe", "_id title image icon")
+        .lean(),
+    ]);
 
     const timetables = await FeedingSchedule.aggregate([
       {
@@ -350,6 +394,17 @@ const getUserById = async (req, res) => {
         supportQuestions,
 
         timetables,
+
+        groceryList: {
+          ...(groceryList || { recipes: [] }),
+          recipesCount: (groceryList?.recipes || []).length,
+          itemsCount: (groceryList?.recipes || []).reduce(
+            (sum, r) => sum + (r.ingredients?.length || 0),
+            0,
+          ),
+        },
+
+        hasGroceryList: Boolean(groceryList),
       },
     });
   } catch (error) {

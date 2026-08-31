@@ -9,6 +9,7 @@ const {
   sendResponse,
   parsePaginationParams,
   generateMeta,
+  validateParams,
 } = require("@utils/responseUtil");
 
 // Add recipe ingredients to grocery list
@@ -631,6 +632,154 @@ const clearGroceryList = async (req, res) => {
   }
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ADMIN
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Get all grocery lists (one per user who has created one)
+const adminGetGroceryLists = async (req, res) => {
+  try {
+    const { page, limit, skip } = parsePaginationParams(req);
+    const { search = "" } = req.query;
+
+    const query = {};
+
+    if (search.trim()) {
+      const matchingUserIds = await User.find({
+        $or: [
+          { name: { $regex: search.trim(), $options: "i" } },
+          { email: { $regex: search.trim(), $options: "i" } },
+        ],
+      }).distinct("_id");
+
+      query.user = { $in: matchingUserIds };
+    }
+
+    const [groceryLists, totalRecords] = await Promise.all([
+      GroceryList.find(query)
+        .populate("user", "_id name email")
+        .populate("baby", "_id name")
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      GroceryList.countDocuments(query),
+    ]);
+
+    const data = groceryLists.map((list) => ({
+      _id: list._id,
+      user: list.user,
+      baby: list.baby,
+      recipesCount: list.recipes.length,
+      itemsCount: list.recipes.reduce(
+        (sum, r) => sum + (r.ingredients?.length || 0),
+        0,
+      ),
+      createdAt: list.createdAt,
+      updatedAt: list.updatedAt,
+    }));
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data,
+      meta: generateMeta(page, limit, totalRecords),
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
+// Get a single grocery list by its id
+const adminGetGroceryListById = async (req, res) => {
+  try {
+    if (
+      !validateParams(req, res, {
+        pathParams: ["id"],
+        objectIdFields: ["id"],
+      })
+    ) {
+      return;
+    }
+
+    const groceryList = await GroceryList.findById(req.params.id)
+      .populate("user", "_id name email")
+      .populate("baby", "_id name")
+      .populate("recipes.recipe", "_id title image");
+
+    if (!groceryList) {
+      return sendResponse({
+        res,
+        statusCode: 404,
+        translationKey: "grocery_list_not_found",
+      });
+    }
+
+    const recipesIncluded = groceryList.recipes.map((r) => ({
+      recipeId: r.recipe?._id,
+      title: r.recipe?.title,
+      image: r.recipe?.image,
+    }));
+
+    const groceryChecklist = [];
+    const categoriesMap = {};
+
+    groceryList.recipes.forEach((recipe) => {
+      recipe.ingredients.forEach((ingredient) => {
+        groceryChecklist.push({
+          _id: ingredient._id,
+          name: ingredient.name,
+          icon: ingredient.icon,
+          quantity: ingredient.quantity,
+          category: ingredient.category,
+        });
+
+        if (ingredient.category) {
+          categoriesMap[ingredient.category] = [
+            ...(categoriesMap[ingredient.category] || []),
+            ingredient.name,
+          ];
+        }
+      });
+    });
+
+    const ingredientCategories = Object.keys(categoriesMap).map(
+      (category) => ({
+        category,
+        items: [...new Set(categoriesMap[category])],
+      }),
+    );
+
+    return sendResponse({
+      res,
+      statusCode: 200,
+      translationKey: "data_fetched_successfully",
+      data: {
+        _id: groceryList._id,
+        user: groceryList.user,
+        baby: groceryList.baby,
+        recipesIncluded,
+        groceryChecklist,
+        ingredientCategories,
+      },
+    });
+  } catch (error) {
+    return sendResponse({
+      res,
+      statusCode: 500,
+      translationKey: "internal_server",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   addRecipeToGroceryList,
   getGroceryList,
@@ -639,4 +788,6 @@ module.exports = {
   removeRecipeFromGroceryList,
   removeGroceryItem,
   clearGroceryList,
+  adminGetGroceryLists,
+  adminGetGroceryListById,
 };

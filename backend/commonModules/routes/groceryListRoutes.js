@@ -5,8 +5,11 @@ const {
   removeGroceryItem,
   clearGroceryList,
   removeRecipeFromGroceryList,
+  adminGetGroceryLists,
+  adminGetGroceryListById,
 } = require("@controllersCommonModules/GroceryListController");
 const auth = require("@middlewares/authMiddleware");
+const roleMiddleware = require("@middlewares/roleMiddleware");
 const createRateLimiter = require("@utils/rateLimiter");
 const express = require("express");
 
@@ -25,6 +28,21 @@ const removeItemRateLimiter = createRateLimiter("removeGroceryItem", 15, 15);
 const clearListRateLimiter = createRateLimiter("clearGroceryList", 15, 15);
 
 router.get("/", auth, getGroceryList);
+
+// ADMIN
+router.get(
+  "/admin/all",
+  auth,
+  roleMiddleware(["admin"]),
+  adminGetGroceryLists,
+);
+
+router.get(
+  "/admin/:id",
+  auth,
+  roleMiddleware(["admin"]),
+  adminGetGroceryListById,
+);
 
 router.post("/add-recipe", auth, addRecipeRateLimiter, addRecipeToGroceryList);
 

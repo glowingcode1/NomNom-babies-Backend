@@ -1315,6 +1315,2172 @@
                 }
               },
               "response": []
+            },
+            {
+              "name": "faqs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/settings/faqs?page=1&limit=10&keyword=",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "settings",
+                    "faqs"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "keyword",
+                      "value": ""
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"faqId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "readNotification",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/notifications/{{notificationId}}/read",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "notifications",
+                    "{{notificationId}}",
+                    "read"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "User",
+          "item": [
+            {
+              "name": "Get Other User Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/users/profile/{{userId}}",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "users",
+                    "profile",
+                    "{{userId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Block User",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/users/{{userId}}/block",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "users",
+                    "{{userId}}",
+                    "block"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Report User",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/users/{{userId}}/report",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "users",
+                    "{{userId}}",
+                    "report"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Add/Update Subscription",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/users/add-update-subscription",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "users",
+                    "add-update-subscription"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"type\": \"sparkConnection\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"userSubscriptionId\", jsonData.data[jsonData.data.length - 1]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Remove Subscription",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/users/remove-subscription/{{userSubscriptionId}}",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "users",
+                    "remove-subscription",
+                    "{{userSubscriptionId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get My Subscriptions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/users/subscriptions",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "users",
+                    "subscriptions"
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"userSubscriptionId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Countries",
+          "item": [
+            {
+              "name": "Get Countries",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/countries?page=1&limit=10",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "countries"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"countryId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Country By Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/countries/{{countryId}}",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "countries",
+                    "{{countryId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Select Countries",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/countries/select",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "countries",
+                    "select"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"countryIds\": [\n        \"{{countryId}}\"\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Cart",
+          "item": [
+            {
+              "name": "Get Cart Recipes",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/cart?page=1&limit=10",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "cart"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"recipeId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Cart Recipe Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/cart/{{recipeId}}",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "cart",
+                    "{{recipeId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Add Ingredient",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/cart/{{recipeId}}/ingredient",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "cart",
+                    "{{recipeId}}",
+                    "ingredient"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Milk\",\n    \"quantity\": \"200ml\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && Array.isArray(jsonData.data.ingredients) && jsonData.data.ingredients.length) {",
+                      "        pm.environment.set(\"cartIngredientId\", jsonData.data.ingredients[jsonData.data.ingredients.length - 1]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Toggle Ingredient",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/cart/toggle/recipe/{{recipeId}}/ingredient/{{cartIngredientId}}",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "cart",
+                    "toggle",
+                    "recipe",
+                    "{{recipeId}}",
+                    "ingredient",
+                    "{{cartIngredientId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Remove Ingredient",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/cart/{{recipeId}}/ingredient/{{cartIngredientId}}",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "cart",
+                    "{{recipeId}}",
+                    "ingredient",
+                    "{{cartIngredientId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Mark All Done",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/cart/{{recipeId}}/mark-all",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "cart",
+                    "{{recipeId}}",
+                    "mark-all"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Recipe From Cart",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}app/cart/{{recipeId}}",
+                  "host": [
+                    "{{url}}app"
+                  ],
+                  "path": [
+                    "cart",
+                    "{{recipeId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Baby Stages",
+          "item": [
+            {
+              "name": "Get Baby Stages",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}baby-stages?page=1&limit=10",
+                  "host": [
+                    "{{url}}baby-stages"
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"babyStageId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Baby Stage By Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}baby-stages/{{babyStageId}}",
+                  "host": [
+                    "{{url}}baby-stages"
+                  ],
+                  "path": [
+                    "{{babyStageId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Select Baby Stage",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}baby-stages/select",
+                  "host": [
+                    "{{url}}baby-stages"
+                  ],
+                  "path": [
+                    "select"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"stageId\": \"{{babyStageId}}\",\n    \"babyName\": \"Baby A\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Babies",
+          "item": [
+            {
+              "name": "Get Babies",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}babies",
+                  "host": [
+                    "{{url}}babies"
+                  ],
+                  "path": []
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"babyId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Switch Active Baby",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}babies/switch-active",
+                  "host": [
+                    "{{url}}babies"
+                  ],
+                  "path": [
+                    "switch-active"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"babyId\": \"{{babyId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Baby By Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}babies/{{babyId}}",
+                  "host": [
+                    "{{url}}babies"
+                  ],
+                  "path": [
+                    "{{babyId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Create Baby",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}babies",
+                  "host": [
+                    "{{url}}babies"
+                  ],
+                  "path": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"profileIcon\": \"\",\n    \"name\": \"Baby A\",\n    \"stageId\": \"{{babyStageId}}\",\n    \"selectedCountries\": [\n        \"{{countryId}}\"\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"babyId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Baby",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}babies/{{babyId}}",
+                  "host": [
+                    "{{url}}babies"
+                  ],
+                  "path": [
+                    "{{babyId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"profileIcon\": \"\",\n    \"name\": \"Baby A\",\n    \"stageId\": \"{{babyStageId}}\",\n    \"countryIds\": [\n        \"{{countryId}}\"\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Baby",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}babies/{{babyId}}",
+                  "host": [
+                    "{{url}}babies"
+                  ],
+                  "path": [
+                    "{{babyId}}"
+                  ]
+                },
+                "description": "Restricted to super admin in a future release (currently any authenticated user)"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Recipes",
+          "item": [
+            {
+              "name": "Get Recipes",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}recipes?countryId=&stageId=&search=&filter=&page=1&limit=10",
+                  "host": [
+                    "{{url}}recipes"
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "key": "countryId",
+                      "value": ""
+                    },
+                    {
+                      "key": "stageId",
+                      "value": ""
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "filter",
+                      "value": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"recipeId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Baby Recipes",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}recipes/baby?search=&country=&page=1&limit=10",
+                  "host": [
+                    "{{url}}recipes"
+                  ],
+                  "path": [
+                    "baby"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "country",
+                      "value": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Custom Cultural Picks",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}recipes/cultural-picks?page=1&limit=10",
+                  "host": [
+                    "{{url}}recipes"
+                  ],
+                  "path": [
+                    "cultural-picks"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Recipe By Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}recipes/{{recipeId}}",
+                  "host": [
+                    "{{url}}recipes"
+                  ],
+                  "path": [
+                    "{{recipeId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Nutrition",
+          "item": [
+            {
+              "name": "Get Nutrition By Recipe",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}nutrition/recipe/{{recipeId}}",
+                  "host": [
+                    "{{url}}nutrition"
+                  ],
+                  "path": [
+                    "recipe",
+                    "{{recipeId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Nutrition (active baby)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}nutrition/baby",
+                  "host": [
+                    "{{url}}nutrition"
+                  ],
+                  "path": [
+                    "baby"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Feeding Schedule",
+          "item": [
+            {
+              "name": "Get Feeding Schedule",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-schedule?date=2026-08-31&page=1&limit=10",
+                  "host": [
+                    "{{url}}feeding-schedule"
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2026-08-31"
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"feedingScheduleId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Feeding Schedule",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-schedule",
+                  "host": [
+                    "{{url}}feeding-schedule"
+                  ],
+                  "path": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"type\": \"meal\",\n    \"title\": \"Breakfast\",\n    \"time\": \"08:00\",\n    \"description\": \"Mashed banana\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"feedingScheduleId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Remove Schedule Slot",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-schedule/slot/{{feedingScheduleId}}",
+                  "host": [
+                    "{{url}}feeding-schedule"
+                  ],
+                  "path": [
+                    "slot",
+                    "{{feedingScheduleId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Feeding Schedule",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-schedule/{{feedingScheduleId}}",
+                  "host": [
+                    "{{url}}feeding-schedule"
+                  ],
+                  "path": [
+                    "{{feedingScheduleId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"type\": \"meal\",\n    \"title\": \"Breakfast\",\n    \"description\": \"Mashed banana\",\n    \"time\": \"08:00\",\n    \"date\": \"2026-08-31\",\n    \"isOptional\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Feeding Schedule",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-schedule/{{feedingScheduleId}}",
+                  "host": [
+                    "{{url}}feeding-schedule"
+                  ],
+                  "path": [
+                    "{{feedingScheduleId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Toggle Slot Completion",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-schedule/toggle/{{feedingScheduleId}}",
+                  "host": [
+                    "{{url}}feeding-schedule"
+                  ],
+                  "path": [
+                    "toggle",
+                    "{{feedingScheduleId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Start Feeding Plan",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-schedule/start",
+                  "host": [
+                    "{{url}}feeding-schedule"
+                  ],
+                  "path": [
+                    "start"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Languages",
+          "item": [
+            {
+              "name": "Get Languages",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}languages?page=1&limit=10",
+                  "host": [
+                    "{{url}}languages"
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"languageId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update My Language",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}languages/user",
+                  "host": [
+                    "{{url}}languages"
+                  ],
+                  "path": [
+                    "user"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"languageId\": \"{{languageId}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Favorites",
+          "item": [
+            {
+              "name": "Get Favorites",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}favorites",
+                  "host": [
+                    "{{url}}favorites"
+                  ],
+                  "path": []
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Add Favorite",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}favorites/{{recipeId}}",
+                  "host": [
+                    "{{url}}favorites"
+                  ],
+                  "path": [
+                    "{{recipeId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Remove Favorite",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}favorites/{{recipeId}}",
+                  "host": [
+                    "{{url}}favorites"
+                  ],
+                  "path": [
+                    "{{recipeId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Grocery List",
+          "item": [
+            {
+              "name": "Get Grocery List",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}grocery-list?page=1&limit=10",
+                  "host": [
+                    "{{url}}grocery-list"
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && Array.isArray(jsonData.data.groceryChecklist) && jsonData.data.groceryChecklist.length) {",
+                      "        pm.environment.set(\"groceryItemId\", jsonData.data.groceryChecklist[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Add Recipe To Grocery List",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}grocery-list/add-recipe",
+                  "host": [
+                    "{{url}}grocery-list"
+                  ],
+                  "path": [
+                    "add-recipe"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"recipeId\": \"{{recipeId}}\",\n    \"ingredientIds\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Grocery Items",
+              "request": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}grocery-list/items",
+                  "host": [
+                    "{{url}}grocery-list"
+                  ],
+                  "path": [
+                    "items"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"selectedItems\": [\n        \"{{groceryItemId}}\"\n    ],\n    \"checked\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Remove Grocery Item",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}grocery-list/item/{{groceryItemId}}",
+                  "host": [
+                    "{{url}}grocery-list"
+                  ],
+                  "path": [
+                    "item",
+                    "{{groceryItemId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Remove Recipe From Grocery List",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}grocery-list/{{recipeId}}",
+                  "host": [
+                    "{{url}}grocery-list"
+                  ],
+                  "path": [
+                    "{{recipeId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Clear Grocery List",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}grocery-list/clear",
+                  "host": [
+                    "{{url}}grocery-list"
+                  ],
+                  "path": [
+                    "clear"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Food Tracker",
+          "item": [
+            {
+              "name": "Create Food Tracker Entry",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}food-tracker",
+                  "host": [
+                    "{{url}}food-tracker"
+                  ],
+                  "path": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"ingredientName\": \"Banana\",\n    \"date\": \"2026-08-31\",\n    \"reaction\": \"none\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Food Tracker (active baby)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}food-tracker/baby?page=1&limit=10",
+                  "host": [
+                    "{{url}}food-tracker"
+                  ],
+                  "path": [
+                    "baby"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Feeding Timetable",
+          "item": [
+            {
+              "name": "Get Feeding Timetable (today)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-timetable?page=1&limit=10",
+                  "host": [
+                    "{{url}}feeding-timetable"
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Timetables",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-timetable/timetables?page=1&limit=10",
+                  "host": [
+                    "{{url}}feeding-timetable"
+                  ],
+                  "path": [
+                    "timetables"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Timetable Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-timetable/timetables/detail?date=2026-08-31",
+                  "host": [
+                    "{{url}}feeding-timetable"
+                  ],
+                  "path": [
+                    "timetables",
+                    "detail"
+                  ],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2026-08-31"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Timetable",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-timetable/timetables?date=2026-08-31",
+                  "host": [
+                    "{{url}}feeding-timetable"
+                  ],
+                  "path": [
+                    "timetables"
+                  ],
+                  "query": [
+                    {
+                      "key": "date",
+                      "value": "2026-08-31"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Reminders",
+          "item": [
+            {
+              "name": "Get Recent Reminders",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}reminders/recent?page=1&limit=10",
+                  "host": [
+                    "{{url}}reminders"
+                  ],
+                  "path": [
+                    "recent"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Reminder Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}reminders/{{reminderId}}",
+                  "host": [
+                    "{{url}}reminders"
+                  ],
+                  "path": [
+                    "{{reminderId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Food Logs",
+          "item": [
+            {
+              "name": "Get Food Logs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}food-logs?page=1&limit=10",
+                  "host": [
+                    "{{url}}food-logs"
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"foodLogId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Food Log",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}food-logs",
+                  "host": [
+                    "{{url}}food-logs"
+                  ],
+                  "path": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"foodName\": \"Banana\",\n    \"day\": 1,\n    \"description\": \"First taste\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"foodLogId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Toggle Food Log Completion",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}food-logs/toggle/{{foodLogId}}",
+                  "host": [
+                    "{{url}}food-logs"
+                  ],
+                  "path": [
+                    "toggle",
+                    "{{foodLogId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Subscription",
+          "item": [
+            {
+              "name": "Get Subscriptions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}subscription?page=1&limit=10",
+                  "host": [
+                    "{{url}}subscription"
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"subscriptionId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Subscription Detail",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}subscription/{{subscriptionId}}",
+                  "host": [
+                    "{{url}}subscription"
+                  ],
+                  "path": [
+                    "{{subscriptionId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Download PDF",
+          "item": [
+            {
+              "name": "Download Feeding Timetable PDF",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}download-pdf/feeding-timetable",
+                  "host": [
+                    "{{url}}download-pdf"
+                  ],
+                  "path": [
+                    "feeding-timetable"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Download Recipe PDF",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}download-pdf/recipe/{{recipeId}}",
+                  "host": [
+                    "{{url}}download-pdf"
+                  ],
+                  "path": [
+                    "recipe",
+                    "{{recipeId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Download Grocery List PDF",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}download-pdf/grocery-list",
+                  "host": [
+                    "{{url}}download-pdf"
+                  ],
+                  "path": [
+                    "grocery-list"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Downloaded PDFs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}download-pdf?page=1&limit=10",
+                  "host": [
+                    "{{url}}download-pdf"
+                  ],
+                  "path": [],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Upload",
+          "item": [
+            {
+              "name": "Upload File (local)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}upload",
+                  "host": [
+                    "{{url}}upload"
+                  ],
+                  "path": []
+                },
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": "/Users/s/Desktop/Development/_FreeLancing/samples_mobile/Circle Images/Circle Images/avatars/Mask Group 27.png"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get File By Name",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}upload/sample-file.png",
+                  "host": [
+                    "{{url}}upload"
+                  ],
+                  "path": [
+                    "sample-file.png"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get File Details",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}upload/details/sample-file.png",
+                  "host": [
+                    "{{url}}upload"
+                  ],
+                  "path": [
+                    "details",
+                    "sample-file.png"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Files",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}upload",
+                  "host": [
+                    "{{url}}upload"
+                  ],
+                  "path": []
+                }
+              },
+              "response": []
             }
           ]
         }
@@ -2277,6 +4443,248 @@
                 }
               },
               "response": []
+            },
+            {
+              "name": "update termsAndConditions",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/settings/terms-conditions",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "settings",
+                    "terms-conditions"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"Terms and Conditions\",\n    \"content\": \"Your terms and conditions text here.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "update aboutUs",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/settings/about-us",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "settings",
+                    "about-us"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"About Us\",\n    \"content\": \"Information about us here.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "update privacyPolicy",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/settings/privacy-policy",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "settings",
+                    "privacy-policy"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"Privacy Policy\",\n    \"content\": \"Your privacy policy text here.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "get Faqs",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/settings/faqs?page=1&limit=10&keyword=",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "settings",
+                    "faqs"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "keyword",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"faqId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "create Faq",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/settings/faqs",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "settings",
+                    "faqs"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"question\": \"How do I add a baby profile?\",\n    \"answer\": \"Go to Settings > Babies > Add Baby.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"faqId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "update Faq",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/settings/faqs/{{faqId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "settings",
+                    "faqs",
+                    "{{faqId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"question\": \"How do I add a baby profile?\",\n    \"answer\": \"Go to Settings > Babies > Add Baby.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "delete Faq",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/settings/faqs/{{faqId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "settings",
+                    "faqs",
+                    "{{faqId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
             }
           ]
         },
@@ -2296,6 +4704,2232 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "User",
+          "item": [
+            {
+              "name": "Get Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/profile",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "profile"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get Other User Profile",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/profile/{{userId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "profile",
+                    "{{userId}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Profile",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/profile",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "profile"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Admin User\",\n    \"profileIcon\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get All Users",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/allUsers?page=1&limit=10&keyword=&status=&country=",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "allUsers"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "keyword",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    },
+                    {
+                      "key": "country",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"userId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get User Babies",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/{{userId}}/babies?page=1&limit=10",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "{{userId}}",
+                    "babies"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"babyId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get User By Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/{{userId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "{{userId}}"
+                  ]
+                },
+                "description": "Requires admin role. Response includes groceryList field."
+              },
+              "response": []
+            },
+            {
+              "name": "Update User Status",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/{{userId}}/status",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "{{userId}}",
+                    "status"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"status\": \"active\",\n    \"reason\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete User",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/{{userId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "{{userId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Block User",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/{{userId}}/block",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "{{userId}}",
+                    "block"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Report User",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/{{userId}}/report",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "{{userId}}",
+                    "report"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Add/Update Subscription",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/add-update-subscription",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "add-update-subscription"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"type\": \"sparkConnection\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"userSubscriptionId\", jsonData.data[jsonData.data.length - 1]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Remove Subscription",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/remove-subscription/{{userSubscriptionId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "remove-subscription",
+                    "{{userSubscriptionId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get My Subscriptions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/user/subscriptions",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "user",
+                    "subscriptions"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Countries",
+          "item": [
+            {
+              "name": "Get Countries",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/countries?page=1&limit=10&search=&status=&enabled=",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "countries"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    },
+                    {
+                      "key": "enabled",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"countryId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Country",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/countries",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "countries"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Pakistan\",\n    \"code\": \"PK\",\n    \"status\": \"active\",\n    \"isEnabled\": true,\n    \"signatureFoods\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"countryId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Country",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/countries/{{countryId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "countries",
+                    "{{countryId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Pakistan\",\n    \"code\": \"PK\",\n    \"status\": \"active\",\n    \"isEnabled\": true,\n    \"signatureFoods\": []\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Country",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/countries/{{countryId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "countries",
+                    "{{countryId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Languages",
+          "item": [
+            {
+              "name": "Create Language",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/languages",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "languages"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"English\",\n    \"transliteration\": \"English\",\n    \"flag\": \"\",\n    \"code\": \"en\",\n    \"active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"languageId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Languages",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/languages?page=1&limit=10",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "languages"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"languageId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Language",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/languages/{{languageId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "languages",
+                    "{{languageId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"English\",\n    \"transliteration\": \"English\",\n    \"flag\": \"\",\n    \"code\": \"en\",\n    \"active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Language",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/languages/{{languageId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "languages",
+                    "{{languageId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Dashboard",
+          "item": [
+            {
+              "name": "Dashboard Widgets",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/widgets",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "widgets"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "User Status Stats",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/user-status",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "user-status"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Platform Health",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/platform-health",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "platform-health"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Platform Growth Trend",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/growth-trend",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "growth-trend"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Country Growth",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/country-growth?limit=5",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "country-growth"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "5"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Recent Activities",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/recent-activities?limit=5",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "recent-activities"
+                  ],
+                  "query": [
+                    {
+                      "key": "limit",
+                      "value": "5"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Top Downloaded Recipes",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/top-downloaded-recipes",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "top-downloaded-recipes"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Downloads By Type",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/downloads-by-type",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "downloads-by-type"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Top Viewed Recipes",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/top-recipes",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "top-recipes"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Top Countries",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/admin-panel/dashboard/top-countries",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "admin-panel",
+                    "dashboard",
+                    "top-countries"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Activities",
+          "item": [
+            {
+              "name": "Get Recent Activities",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/activities?page=1&limit=10&search=&userType=&module=",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "activities"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "userType",
+                      "value": ""
+                    },
+                    {
+                      "key": "module",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Support Requests",
+          "item": [
+            {
+              "name": "Get Support Requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/support?page=1&limit=10&keyword=&status=all",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "support"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "keyword",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": "all"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"supportRequestId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Support Status",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/support/status/{{supportRequestId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "support",
+                    "status",
+                    "{{supportRequestId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"status\": \"responded\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Support Request",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}admin/support/{{supportRequestId}}",
+                  "host": [
+                    "{{url}}admin"
+                  ],
+                  "path": [
+                    "support",
+                    "{{supportRequestId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Baby Stages",
+          "item": [
+            {
+              "name": "Admin Get All Baby Stages",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}baby-stages/admin/all?page=1&limit=10&search=&status=all",
+                  "host": [
+                    "{{url}}baby-stages"
+                  ],
+                  "path": [
+                    "admin",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": "all"
+                    }
+                  ]
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"babyStageId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Baby Stage",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}baby-stages",
+                  "host": [
+                    "{{url}}baby-stages"
+                  ],
+                  "path": []
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"6-8 Months\",\n    \"features\": [\n        \"Purees\",\n        \"Mashed foods\"\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"babyStageId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Baby Stage",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}baby-stages/{{babyStageId}}",
+                  "host": [
+                    "{{url}}baby-stages"
+                  ],
+                  "path": [
+                    "{{babyStageId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"6-8 Months\",\n    \"features\": [\n        \"Purees\",\n        \"Mashed foods\"\n    ],\n    \"active\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Baby Stage",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}baby-stages/{{babyStageId}}",
+                  "host": [
+                    "{{url}}baby-stages"
+                  ],
+                  "path": [
+                    "{{babyStageId}}"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Recipes",
+          "item": [
+            {
+              "name": "Admin Get All Recipes",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}recipes/admin/all?search=&status=&countryId=&stageId=&page=1&limit=10",
+                  "host": [
+                    "{{url}}recipes"
+                  ],
+                  "path": [
+                    "admin",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    },
+                    {
+                      "key": "countryId",
+                      "value": ""
+                    },
+                    {
+                      "key": "stageId",
+                      "value": ""
+                    },
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"recipeId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Recipe",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}recipes/admin",
+                  "host": [
+                    "{{url}}recipes"
+                  ],
+                  "path": [
+                    "admin"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"Mashed Banana\",\n    \"icon\": \"\",\n    \"image\": \"\",\n    \"prepTime\": \"5 mins\",\n    \"country\": \"{{countryId}}\",\n    \"babyStage\": \"{{babyStageId}}\",\n    \"mealType\": \"{{mealId}}\",\n    \"nutritionTags\": [\n        \"{{nutritionTagId}}\"\n    ],\n    \"feedingInsight\": \"\",\n    \"allergyReminder\": \"\",\n    \"ingredients\": [],\n    \"method\": [],\n    \"notes\": \"\",\n    \"acceptanceLabel\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role. mealType must be a valid Meal ObjectId."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"recipeId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin Get Recipe By Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}recipes/admin/{{recipeId}}",
+                  "host": [
+                    "{{url}}recipes"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{recipeId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Update Recipe",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}recipes/admin/{{recipeId}}",
+                  "host": [
+                    "{{url}}recipes"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{recipeId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"Mashed Banana\",\n    \"icon\": \"\",\n    \"image\": \"\",\n    \"prepTime\": \"5 mins\",\n    \"country\": \"{{countryId}}\",\n    \"babyStage\": \"{{babyStageId}}\",\n    \"mealType\": \"{{mealId}}\",\n    \"nutritionTags\": [\n        \"{{nutritionTagId}}\"\n    ],\n    \"feedingInsight\": \"\",\n    \"allergyReminder\": \"\",\n    \"ingredients\": [],\n    \"method\": [],\n    \"notes\": \"\",\n    \"acceptanceLabel\": \"\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role. mealType must be a valid Meal ObjectId."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Recipe",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}recipes/admin/{{recipeId}}",
+                  "host": [
+                    "{{url}}recipes"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{recipeId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Meals",
+          "item": [
+            {
+              "name": "Create Meal",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}meals/admin",
+                  "host": [
+                    "{{url}}meals"
+                  ],
+                  "path": [
+                    "admin"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Breakfast\",\n    \"description\": \"Morning meal\",\n    \"status\": \"active\",\n    \"isActive\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"mealId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin Get All Meals",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}meals/admin/all?page=1&limit=10&search=&status=&isActive=",
+                  "host": [
+                    "{{url}}meals"
+                  ],
+                  "path": [
+                    "admin",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    },
+                    {
+                      "key": "isActive",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"mealId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Meal",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}meals/admin/{{mealId}}",
+                  "host": [
+                    "{{url}}meals"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{mealId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Breakfast\",\n    \"description\": \"Morning meal\",\n    \"status\": \"active\",\n    \"isActive\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Meal",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}meals/admin/{{mealId}}",
+                  "host": [
+                    "{{url}}meals"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{mealId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Nutrition",
+          "item": [
+            {
+              "name": "Admin Get All Nutrition",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}nutrition/admin/all?page=1&limit=10&search=&status=",
+                  "host": [
+                    "{{url}}nutrition"
+                  ],
+                  "path": [
+                    "admin",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    },
+                    {
+                      "key": "status",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"nutritionTagId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Nutrition",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}nutrition/admin",
+                  "host": [
+                    "{{url}}nutrition"
+                  ],
+                  "path": [
+                    "admin"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Iron\",\n    \"benefit\": \"Supports healthy blood cells\",\n    \"status\": \"active\",\n    \"isActive\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"nutritionTagId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Nutrition",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}nutrition/admin/{{nutritionTagId}}",
+                  "host": [
+                    "{{url}}nutrition"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{nutritionTagId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"name\": \"Iron\",\n    \"benefit\": \"Supports healthy blood cells\",\n    \"status\": \"active\",\n    \"isActive\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Nutrition",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}nutrition/admin/{{nutritionTagId}}",
+                  "host": [
+                    "{{url}}nutrition"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{nutritionTagId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Feeding Schedule",
+          "item": [
+            {
+              "name": "Get User Feeding Schedules",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-schedule/admin/user/{{userId}}?page=1&limit=10",
+                  "host": [
+                    "{{url}}feeding-schedule"
+                  ],
+                  "path": [
+                    "admin",
+                    "user",
+                    "{{userId}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get User Baby Feeding Schedule",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}feeding-schedule/admin/user/{{userId}}/baby/{{babyId}}?page=1&limit=10",
+                  "host": [
+                    "{{url}}feeding-schedule"
+                  ],
+                  "path": [
+                    "admin",
+                    "user",
+                    "{{userId}}",
+                    "baby",
+                    "{{babyId}}"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Reminders",
+          "item": [
+            {
+              "name": "Admin Get All Reminders",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}reminders/admin/all?page=1&limit=10",
+                  "host": [
+                    "{{url}}reminders"
+                  ],
+                  "path": [
+                    "admin",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"reminderId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin Get Reminder By Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}reminders/admin/{{reminderId}}",
+                  "host": [
+                    "{{url}}reminders"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{reminderId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Create Reminder",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}reminders/admin",
+                  "host": [
+                    "{{url}}reminders"
+                  ],
+                  "path": [
+                    "admin"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"Introduce new food slowly\",\n    \"description\": \"Wait 3 days between new foods\",\n    \"tags\": [\n        \"allergy\"\n    ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"reminderId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Reminder",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}reminders/admin/{{reminderId}}",
+                  "host": [
+                    "{{url}}reminders"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{reminderId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"Introduce new food slowly\",\n    \"description\": \"Wait 3 days between new foods\",\n    \"tags\": [\n        \"allergy\"\n    ],\n    \"isActive\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Reminder",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}reminders/admin/{{reminderId}}",
+                  "host": [
+                    "{{url}}reminders"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{reminderId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Subscription",
+          "item": [
+            {
+              "name": "Create Subscription",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}subscription/admin",
+                  "host": [
+                    "{{url}}subscription"
+                  ],
+                  "path": [
+                    "admin"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"Bloom Again Essentials\",\n    \"price\": 9.99,\n    \"currency\": \"USD\",\n    \"billingCycle\": \"monthly\",\n    \"badge\": \"\",\n    \"features\": [\n        \"Unlimited recipes\",\n        \"PDF downloads\"\n    ],\n    \"sortOrder\": 1,\n    \"isActive\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200 || pm.response.code === 201) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && jsonData.data && jsonData.data._id) {",
+                      "        pm.environment.set(\"subscriptionId\", jsonData.data._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Subscription",
+              "request": {
+                "method": "PUT",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}subscription/admin/{{subscriptionId}}",
+                  "host": [
+                    "{{url}}subscription"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{subscriptionId}}"
+                  ]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"Bloom Again Essentials\",\n    \"price\": 9.99,\n    \"currency\": \"USD\",\n    \"billingCycle\": \"monthly\",\n    \"badge\": \"\",\n    \"features\": [\n        \"Unlimited recipes\",\n        \"PDF downloads\"\n    ],\n    \"sortOrder\": 1,\n    \"isActive\": true\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Subscription",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}subscription/admin/{{subscriptionId}}",
+                  "host": [
+                    "{{url}}subscription"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{subscriptionId}}"
+                  ]
+                },
+                "description": "Requires admin role"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Food Tracker",
+          "item": [
+            {
+              "name": "Admin Get All Food Trackers",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}food-tracker/admin?page=1&limit=10",
+                  "host": [
+                    "{{url}}food-tracker"
+                  ],
+                  "path": [
+                    "admin"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Grocery List",
+          "item": [
+            {
+              "name": "Admin Get All Grocery Lists",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}grocery-list/admin/all?page=1&limit=10&search=",
+                  "host": [
+                    "{{url}}grocery-list"
+                  ],
+                  "path": [
+                    "admin",
+                    "all"
+                  ],
+                  "query": [
+                    {
+                      "key": "page",
+                      "value": "1"
+                    },
+                    {
+                      "key": "limit",
+                      "value": "10"
+                    },
+                    {
+                      "key": "search",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Requires admin role. Paginated list of every user's grocery list."
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    var jsonData = pm.response.json();",
+                      "    if (jsonData && Array.isArray(jsonData.data) && jsonData.data.length) {",
+                      "        pm.environment.set(\"groceryListId\", jsonData.data[0]._id);",
+                      "    }",
+                      "}"
+                    ],
+                    "type": "text/javascript",
+                    "packages": {}
+                  }
+                },
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "exec": [],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Admin Get Grocery List By Id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{url}}grocery-list/admin/{{groceryListId}}",
+                  "host": [
+                    "{{url}}grocery-list"
+                  ],
+                  "path": [
+                    "admin",
+                    "{{groceryListId}}"
+                  ]
+                },
+                "description": "Requires admin role. Fetch a single grocery list by its own _id."
+              },
+              "response": []
+            }
+          ]
         }
       ]
     }
